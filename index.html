@@ -668,6 +668,7 @@ let META_MIN = 75000;
 let META_MAX = 99000;
 
 let items = [];
+let loadGeneration = 0;
 let view = 'tablero';
 let tableSubView = 'todos';
 let editingId = null;
@@ -854,31 +855,43 @@ function initAuthWatcher(){
 }
 
 async function loadItems(){
+  const myGeneration = ++loadGeneration;
   let cargado = false;
+  let nuevoItems, nuevaCategoriasExtra, nuevoProcesosExtra, nuevoMaterialesExtra, nuevoMetaMin, nuevoMetaMax;
   for(let intento=1; intento<=3 && !cargado; intento++){
     try{
       const res = await storageGet('taller-items');
-      items = res && res.value ? JSON.parse(res.value) : [];
+      nuevoItems = res && res.value ? JSON.parse(res.value) : [];
       const catRes = await storageGet('taller-categorias-extra');
-      categoriasExtra = catRes && catRes.value ? JSON.parse(catRes.value) : [];
+      nuevaCategoriasExtra = catRes && catRes.value ? JSON.parse(catRes.value) : [];
       const procRes = await storageGet('taller-procesos-extra');
-      procesosExtra = procRes && procRes.value ? JSON.parse(procRes.value) : [];
+      nuevoProcesosExtra = procRes && procRes.value ? JSON.parse(procRes.value) : [];
       const matRes = await storageGet('taller-materiales-extra');
-      materialesExtra = matRes && matRes.value ? JSON.parse(matRes.value) : [];
+      nuevoMaterialesExtra = matRes && matRes.value ? JSON.parse(matRes.value) : [];
       const metasRes = await storageGet('taller-metas');
       if(metasRes && metasRes.value){
         const m = JSON.parse(metasRes.value);
-        if(m.min) META_MIN = m.min;
-        if(m.max) META_MAX = m.max;
+        if(m.min) nuevoMetaMin = m.min;
+        if(m.max) nuevoMetaMax = m.max;
       }
-      setStorageBanner(false);
-      migrarNombresDeEstado();
       cargado = true;
     }catch(e){
       if(intento<3){ await sleep(500*intento); continue; }
+      if(myGeneration !== loadGeneration) return; // el usuario ya guardo datos mas recientes (p.ej. restauro un respaldo); no pisar eso con un fallo de carga obsoleto
       items = [];
       setStorageBanner(true, 'No se pudo cargar ni el guardado de Claude ni el guardado local de este navegador, tras varios intentos. Descarga un respaldo apenas puedas registrar algo, para no perderlo.');
     }
+  }
+  if(myGeneration !== loadGeneration) return; // esta carga quedo obsoleta: alguien guardo datos mas nuevos mientras estaba en curso
+  if(cargado){
+    items = nuevoItems;
+    categoriasExtra = nuevaCategoriasExtra;
+    procesosExtra = nuevoProcesosExtra;
+    materialesExtra = nuevoMaterialesExtra;
+    if(nuevoMetaMin) META_MIN = nuevoMetaMin;
+    if(nuevoMetaMax) META_MAX = nuevoMetaMax;
+    setStorageBanner(false);
+    migrarNombresDeEstado();
   }
   render();
 }
@@ -1015,6 +1028,7 @@ function handleCategoriaChange(sel){
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function saveItems(){
+  loadGeneration++; // invalida cualquier loadItems() en curso: este guardado ya es el dato mas reciente
   for(let intento=1; intento<=3; intento++){
     try{
       const res = await storageSet('taller-items', JSON.stringify(items));

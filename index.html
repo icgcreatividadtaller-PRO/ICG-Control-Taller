@@ -418,7 +418,6 @@
       <div class="tool-btn" onclick="exportBackup()"><span class="icon">&#8681;</span> Descargar respaldo</div>
       <div class="tool-btn" onclick="document.getElementById('import-file').click()"><span class="icon">&#8679;</span> Restaurar respaldo</div>
       <input type="file" id="import-file" accept="application/json" style="display:none;" onchange="handleImportFile(event)">
-      <div class="tool-btn" style="background:rgba(0,169,193,0.18); border-color:var(--cyan); color:var(--cyan);" onclick="testFieldSizeLimit()"><span class="icon">&#128300;</span> Prueba limite Firestore (temporal)</div>
       <div class="tool-btn logout" onclick="handleLogout()"><span class="icon">&#9099;</span> Cerrar sesion</div>
     </div>
   </div>
@@ -824,39 +823,67 @@ async function loadItemsFromCollection(){
   return { loadedItems, syncedMap };
 }
 
+// Escribe solo los proyectos que cambiaron desde el ultimo guardado exitoso. Primero intenta un
+// unico batch (rapido, un solo viaje de red). Si ese batch falla, Firestore lo rechaza COMPLETO
+// aunque el problema sea de un solo documento (p.ej. un adjunto demasiado pesado) - por eso, ante
+// ese fallo, reintenta documento por documento para aislar cual es el problematico: los demas se
+// guardan igual, y el que falla se reporta con claridad en vez de perderse o bloquear a los otros.
+// Devuelve {fallidos: [...]} con los proyectos que no se pudieron guardar (vacio si todo salio bien).
 async function writeItemsBatch(currentItems){
   const fs = await getFirestoreHelpers();
-  const batch = fs.writeBatch(fs.db);
+  const cambios = []; // {id, item, tipo:'set'|'delete'}
   const currentIds = new Set();
-  let cambios = 0;
   currentItems.forEach(it=>{
     const id = String(it.id);
     currentIds.add(id);
     const serialized = JSON.stringify(it);
-    if(lastSyncedItemDocs[id] !== serialized){
-      batch.set(fs.doc(fs.db, ITEMS_COLLECTION, id), it);
-      cambios++;
-    }
+    if(lastSyncedItemDocs[id] !== serialized) cambios.push({id, item:it, tipo:'set'});
   });
   Object.keys(lastSyncedItemDocs).forEach(id=>{
-    if(!currentIds.has(id)){
-      batch.delete(fs.doc(fs.db, ITEMS_COLLECTION, id));
-      cambios++;
-    }
+    if(!currentIds.has(id)) cambios.push({id, item:null, tipo:'delete'});
   });
-  if(cambios === 0) return; // nada cambio realmente, no hay nada que escribir
-  console.log('[DEBUG '+performance.now().toFixed(1)+'] writeItemsBatch: escribiendo '+cambios+' documento(s) modificado(s) de '+currentItems.length+' proyectos totales');
+  if(cambios.length === 0) return {fallidos: []};
+
   itemsWritePending = true;
   try{
-    await batch.commit();
-    const newSynced = {};
-    currentItems.forEach(it=> newSynced[String(it.id)] = JSON.stringify(it));
-    lastSyncedItemDocs = newSynced;
-    console.log('[DEBUG '+performance.now().toFixed(1)+'] writeItemsBatch: commit exitoso');
-  }catch(e){
-    console.error('[DEBUG '+performance.now().toFixed(1)+'] writeItemsBatch: commit FALLO', e);
-    throw e;
-  }finally{
+    try{
+      const batch = fs.writeBatch(fs.db);
+      cambios.forEach(c=>{
+        if(c.tipo==='set') batch.set(fs.doc(fs.db, ITEMS_COLLECTION, c.id), c.item);
+        else batch.delete(fs.doc(fs.db, ITEMS_COLLECTION, c.id));
+      });
+      await batch.commit();
+      cambios.forEach(c=>{
+        if(c.tipo==='set') lastSyncedItemDocs[c.id] = JSON.stringify(c.item);
+        else delete lastSyncedItemDocs[c.id];
+      });
+      return {fallidos: []};
+    }catch(batchError){
+      console.warn('El guardado combinado fallo; reintentando documento por documento para aislar el problema', batchError);
+    }
+
+    const fallidos = [];
+    for(const c of cambios){
+      try{
+        if(c.tipo==='set'){
+          await fs.setDoc(fs.doc(fs.db, ITEMS_COLLECTION, c.id), c.item);
+          lastSyncedItemDocs[c.id] = JSON.stringify(c.item);
+        } else {
+          await fs.deleteDoc(fs.doc(fs.db, ITEMS_COLLECTION, c.id));
+          delete lastSyncedItemDocs[c.id];
+        }
+      }catch(itemError){
+        console.error('No se pudo guardar el proyecto '+c.id+' en Firestore', itemError);
+        fallidos.push({id: c.id, item: c.item, error: itemError});
+      }
+    }
+    if(fallidos.length === cambios.length){
+      // nada se guardo ni siquiera documento por documento: probablemente un problema real de
+      // red/permisos (no de tamano de un adjunto), vale la pena que saveItems() reintente.
+      throw fallidos[0].error;
+    }
+    return {fallidos};
+  } finally {
     itemsWritePending = false;
   }
 }
@@ -866,55 +893,16 @@ async function migrarDocUnicoSiExiste(){
   const oldRef = fs.doc(fs.db, 'taller', 'taller-items');
   const oldSnap = await fs.getDoc(oldRef);
   if(!oldSnap.exists()) return null;
-  console.log('[DEBUG] Se encontro la estructura vieja (documento unico taller-items): migrando a documentos individuales...');
   const oldItems = oldSnap.data().value ? JSON.parse(oldSnap.data().value) : [];
-  if(oldItems.length) await writeItemsBatch(oldItems);
-  await fs.deleteDoc(oldRef);
-  console.log('[DEBUG] Migracion completa: '+oldItems.length+' proyecto(s) movidos a la coleccion "'+ITEMS_COLLECTION+'", documento viejo borrado.');
-  return oldItems;
-}
-
-// PRUEBA TEMPORAL: escribe 3 documentos de prueba controlados en taller_items para determinar
-// con precision el limite real de tamano de campo en Firestore (no se guarda en el estado de la
-// app, se borra solo al terminar). Quitar este boton y esta funcion una vez confirmado el limite.
-async function testFieldSizeLimit(){
-  function bytesString(n){
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let s = '';
-    for(let i=0;i<n;i++) s += chars[i % chars.length];
-    return s;
-  }
-  const fs = await getFirestoreHelpers();
-  const pruebas = [
-    { nombre: 'Campo ANIDADO (fotoFinal.data) de 1500 bytes', id: 'zzz-test-nested-1500',
-      data: { cliente:'TEST LIMITE', descripcion:'prueba', fotoFinal: { data: bytesString(1500), nombre:'t', tipo:'t' } } },
-    { nombre: 'Campo ANIDADO (fotoFinal.data) de 1600 bytes', id: 'zzz-test-nested-1600',
-      data: { cliente:'TEST LIMITE', descripcion:'prueba', fotoFinal: { data: bytesString(1600), nombre:'t', tipo:'t' } } },
-    { nombre: 'Campo de NIVEL SUPERIOR (descripcion) de 1600 bytes, sin anidar', id: 'zzz-test-flat-1600',
-      data: { cliente:'TEST LIMITE', descripcion: bytesString(1600) } }
-  ];
-  const resumen = [];
-  console.log('%c=== INICIO PRUEBA DE LIMITE DE CAMPO EN FIRESTORE ===', 'font-weight:bold;color:#00A9C1;');
-  for(const p of pruebas){
-    const ref = fs.doc(fs.db, ITEMS_COLLECTION, p.id);
-    const tamanoTotal = new Blob([JSON.stringify(p.data)]).size;
-    let linea;
-    try{
-      await fs.setDoc(ref, p.data);
-      linea = p.nombre+' | payload total: '+tamanoTotal+' bytes | RESULTADO: EXITO (se guardo sin error)';
-    }catch(e){
-      linea = p.nombre+' | payload total: '+tamanoTotal+' bytes | RESULTADO: FALLO | code='+e.code+' | message="'+e.message+'"';
+  if(oldItems.length){
+    const resultado = await writeItemsBatch(oldItems);
+    if(resultado.fallidos.length){
+      console.error(resultado.fallidos.length+' proyecto(s) no se pudieron migrar (probablemente por un adjunto muy pesado); el documento viejo NO se borra para no perderlos.');
+      return oldItems;
     }
-    console.log('[LIMITE-TEST] '+linea);
-    resumen.push(linea);
   }
-  console.log('%c=== FIN PRUEBA. Borrando documentos de prueba... ===', 'font-weight:bold;color:#00A9C1;');
-  for(const p of pruebas){
-    try{ await fs.deleteDoc(fs.doc(fs.db, ITEMS_COLLECTION, p.id)); console.log('[LIMITE-TEST] Borrado: '+p.id); }
-    catch(e){ console.log('[LIMITE-TEST] No se pudo borrar '+p.id+' (probablemente nunca se creo): '+e.message); }
-  }
-  console.log('%c=== LIMPIEZA COMPLETA ===', 'font-weight:bold;color:#00A9C1;');
-  alert('Prueba de limite de Firestore terminada. Resultados:\n\n'+resumen.join('\n\n')+'\n\nCopia tambien las lineas [LIMITE-TEST] de la consola y pasaselas a Claude.');
+  await fs.deleteDoc(oldRef);
+  return oldItems;
 }
 
 function watchItemsRealtime(){
@@ -1223,8 +1211,17 @@ async function saveItems(){
   localStorage.setItem('taller_taller-items', JSON.stringify(items));
   for(let intento=1; intento<=3; intento++){
     try{
-      await writeItemsBatch(items);
-      setStorageBanner(false);
+      const resultado = await writeItemsBatch(items);
+      if(resultado.fallidos.length){
+        const detalle = resultado.fallidos.map(f=>{
+          const cliente = f.item ? (f.item.cliente || '(sin cliente)') : '(proyecto eliminado)';
+          const desc = f.item ? (f.item.descripcion || '') : '';
+          return '"'+cliente+'"'+(desc ? ' - '+desc : '');
+        }).join(', ');
+        setStorageBanner(true, 'ATENCION: '+resultado.fallidos.length+' proyecto(s) NO se pudieron guardar en la nube (probablemente por un archivo adjunto demasiado pesado): '+detalle+'. Se guardaron solo en este navegador; reduce el tamano del adjunto y vuelve a guardar para sincronizarlos. El resto de los proyectos SI se guardo correctamente.');
+      } else {
+        setStorageBanner(false);
+      }
       return;
     }catch(e){
       console.warn('Error guardando items en Firestore', e);

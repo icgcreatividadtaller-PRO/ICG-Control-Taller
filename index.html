@@ -333,6 +333,10 @@
     doc,
     getDoc,
     setDoc,
+    deleteDoc,
+    collection,
+    getDocs,
+    writeBatch,
     onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
   import {
@@ -357,7 +361,7 @@
     // que bloquean el WebSocket normal: detecta el fallo y cambia sola a long-polling.
     const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
     const auth = getAuth(app);
-    window.__firebaseReadyResolve({ db, doc, getDoc, setDoc, onSnapshot, auth, signInWithEmailAndPassword, signOut, onAuthStateChanged });
+    window.__firebaseReadyResolve({ db, doc, getDoc, setDoc, deleteDoc, collection, getDocs, writeBatch, onSnapshot, auth, signInWithEmailAndPassword, signOut, onAuthStateChanged });
   }catch(e){
     console.error('No se pudo inicializar Firebase, se usara solo localStorage', e);
   }
@@ -771,8 +775,6 @@ async function getFirestoreHelpers(){
   // dispositivo nuevo mientras los datos reales de Firestore todavia estaban en camino.
   return await withTimeout(window.__firebaseReady, 15000);
 }
-let lastKnownItemsValue = null;
-let itemsWritePending = false;
 async function storageGet(key){
   try{
     const fs = await getFirestoreHelpers();
@@ -780,7 +782,6 @@ async function storageGet(key){
     if(snap.exists()){
       const value = snap.data().value;
       localStorage.setItem('taller_'+key, value);
-      if(key==='taller-items') lastKnownItemsValue = value;
       return {value};
     }
     return null;
@@ -792,11 +793,6 @@ async function storageGet(key){
 }
 async function storageSet(key, value){
   localStorage.setItem('taller_'+key, value);
-  if(key==='taller-items'){
-    lastKnownItemsValue = value;
-    itemsWritePending = true;
-    console.log('[DEBUG '+performance.now().toFixed(1)+'] itemsWritePending = TRUE (storageSet start, key='+key+')');
-  }
   try{
     const fs = await getFirestoreHelpers();
     await fs.setDoc(fs.doc(fs.db, 'taller', key), {value});
@@ -804,34 +800,105 @@ async function storageSet(key, value){
   }catch(e){
     console.warn('Firestore no disponible, se guardo solo en localStorage', key, e);
     return {value};
-  }finally{
-    if(key==='taller-items'){
-      itemsWritePending = false;
-      console.log('[DEBUG '+performance.now().toFixed(1)+'] itemsWritePending = FALSE (storageSet end, key='+key+')');
-    }
   }
 }
+
+// Cada proyecto es su propio documento en esta coleccion (en vez de un unico documento con el array
+// completo), porque un solo documento con todos los proyectos supera el limite de 1MB por documento
+// de Firestore apenas se acumulan varias decenas de proyectos con fotos adjuntas.
+const ITEMS_COLLECTION = 'taller_items';
+let lastSyncedItemDocs = {}; // id -> JSON.stringify(item), el ultimo estado que sabemos sincronizado con Firestore
+let itemsWritePending = false; // true mientras un writeItemsBatch() esta en vuelo
+
+async function loadItemsFromCollection(){
+  const fs = await getFirestoreHelpers();
+  const snap = await fs.getDocs(fs.collection(fs.db, ITEMS_COLLECTION));
+  const loadedItems = [];
+  const syncedMap = {};
+  snap.forEach(docSnap=>{
+    const data = docSnap.data();
+    loadedItems.push(data);
+    syncedMap[docSnap.id] = JSON.stringify(data);
+  });
+  return { loadedItems, syncedMap };
+}
+
+async function writeItemsBatch(currentItems){
+  const fs = await getFirestoreHelpers();
+  const batch = fs.writeBatch(fs.db);
+  const currentIds = new Set();
+  let cambios = 0;
+  currentItems.forEach(it=>{
+    const id = String(it.id);
+    currentIds.add(id);
+    const serialized = JSON.stringify(it);
+    if(lastSyncedItemDocs[id] !== serialized){
+      batch.set(fs.doc(fs.db, ITEMS_COLLECTION, id), it);
+      cambios++;
+    }
+  });
+  Object.keys(lastSyncedItemDocs).forEach(id=>{
+    if(!currentIds.has(id)){
+      batch.delete(fs.doc(fs.db, ITEMS_COLLECTION, id));
+      cambios++;
+    }
+  });
+  if(cambios === 0) return; // nada cambio realmente, no hay nada que escribir
+  console.log('[DEBUG '+performance.now().toFixed(1)+'] writeItemsBatch: escribiendo '+cambios+' documento(s) modificado(s) de '+currentItems.length+' proyectos totales');
+  itemsWritePending = true;
+  try{
+    await batch.commit();
+    const newSynced = {};
+    currentItems.forEach(it=> newSynced[String(it.id)] = JSON.stringify(it));
+    lastSyncedItemDocs = newSynced;
+    console.log('[DEBUG '+performance.now().toFixed(1)+'] writeItemsBatch: commit exitoso');
+  }catch(e){
+    console.error('[DEBUG '+performance.now().toFixed(1)+'] writeItemsBatch: commit FALLO', e);
+    throw e;
+  }finally{
+    itemsWritePending = false;
+  }
+}
+
+async function migrarDocUnicoSiExiste(){
+  const fs = await getFirestoreHelpers();
+  const oldRef = fs.doc(fs.db, 'taller', 'taller-items');
+  const oldSnap = await fs.getDoc(oldRef);
+  if(!oldSnap.exists()) return null;
+  console.log('[DEBUG] Se encontro la estructura vieja (documento unico taller-items): migrando a documentos individuales...');
+  const oldItems = oldSnap.data().value ? JSON.parse(oldSnap.data().value) : [];
+  if(oldItems.length) await writeItemsBatch(oldItems);
+  await fs.deleteDoc(oldRef);
+  console.log('[DEBUG] Migracion completa: '+oldItems.length+' proyecto(s) movidos a la coleccion "'+ITEMS_COLLECTION+'", documento viejo borrado.');
+  return oldItems;
+}
+
 function watchItemsRealtime(){
   getFirestoreHelpers().then(fs=>{
-    fs.onSnapshot(fs.doc(fs.db, 'taller', 'taller-items'), snap=>{
-      console.log('[DEBUG '+performance.now().toFixed(1)+'] onSnapshot FIRED. exists='+snap.exists()+' hasPendingWrites='+snap.metadata.hasPendingWrites+' itemsWritePending='+itemsWritePending+' editingId='+editingId);
-      if(!snap.exists() || snap.metadata.hasPendingWrites){ console.log('[DEBUG] -> ignorado (no existe o hasPendingWrites)'); return; }
-      if(editingId !== null){ console.log('[DEBUG] -> ignorado (editingId activo)'); return; }
-      // Si hay un guardado nuestro (storageSet) todavia en vuelo, cualquier evento que llegue aqui
+    fs.onSnapshot(fs.collection(fs.db, ITEMS_COLLECTION), snapshot=>{
+      if(snapshot.metadata.hasPendingWrites) return;
+      if(editingId !== null) return;
+      // Si hay un guardado nuestro (writeItemsBatch) todavia en vuelo, cualquier evento que llegue aqui
       // que no sea el eco de ese guardado es, por definicion, anterior a el: lo ignoramos para no
       // pisar un cambio mas reciente del usuario (p.ej. restaurar un respaldo) con datos viejos.
-      if(itemsWritePending){ console.log('[DEBUG] -> ignorado (itemsWritePending activo)'); return; }
-      const value = snap.data().value;
-      if(value === lastKnownItemsValue){ console.log('[DEBUG] -> ignorado (igual a lastKnownItemsValue)'); return; }
-      console.log('[DEBUG '+performance.now().toFixed(1)+'] -> APLICANDO snapshot: '+value.slice(0,120));
+      if(itemsWritePending) return;
+      const nuevosItems = [];
+      const syncedMap = {};
+      snapshot.forEach(docSnap=>{
+        const data = docSnap.data();
+        nuevosItems.push(data);
+        syncedMap[docSnap.id] = JSON.stringify(data);
+      });
+      const incoming = JSON.stringify(nuevosItems);
+      if(incoming === JSON.stringify(items)) return;
       try{
-        items = JSON.parse(value);
-        lastKnownItemsValue = value;
-        localStorage.setItem('taller_taller-items', value);
+        items = nuevosItems;
+        lastSyncedItemDocs = syncedMap;
+        localStorage.setItem('taller_taller-items', incoming);
         migrarNombresDeEstado();
         render();
       }catch(e){ console.warn('No se pudo aplicar la actualizacion en tiempo real', e); }
-    }, err=> console.warn('Listener de taller-items fallo', err));
+    }, err=> console.warn('Listener de '+ITEMS_COLLECTION+' fallo', err));
   }).catch(()=>{ /* sin Firebase disponible, no hay tiempo real */ });
 }
 
@@ -908,11 +975,10 @@ async function handleLogout(){
 function initAuthWatcher(){
   getFirestoreHelpers().then(fs=>{
     fs.onAuthStateChanged(fs.auth, user=>{
-      console.log('[DEBUG '+performance.now().toFixed(1)+'] onAuthStateChanged FIRED, user='+(user?user.email:null)+', watchStarted='+watchStarted);
       if(user){
         showLoadingScreen();
         loadItems();
-        if(!watchStarted){ watchStarted = true; watchItemsRealtime(); console.log('[DEBUG '+performance.now().toFixed(1)+'] watchItemsRealtime() llamado por primera vez'); }
+        if(!watchStarted){ watchStarted = true; watchItemsRealtime(); }
       } else {
         showLogin();
       }
@@ -924,13 +990,19 @@ function initAuthWatcher(){
 
 async function loadItems(){
   const myGeneration = ++loadGeneration;
-  console.log('[DEBUG '+performance.now().toFixed(1)+'] loadItems() INICIO, gen='+myGeneration);
   let cargado = false;
-  let nuevoItems, nuevaCategoriasExtra, nuevoProcesosExtra, nuevoMaterialesExtra, nuevoMetaMin, nuevoMetaMax;
+  let nuevoItems, nuevoSyncedMap, nuevaCategoriasExtra, nuevoProcesosExtra, nuevoMaterialesExtra, nuevoMetaMin, nuevoMetaMax;
   for(let intento=1; intento<=3 && !cargado; intento++){
     try{
-      const res = await storageGet('taller-items');
-      nuevoItems = res && res.value ? JSON.parse(res.value) : [];
+      const migrados = await migrarDocUnicoSiExiste();
+      if(migrados){
+        nuevoItems = migrados;
+        nuevoSyncedMap = {...lastSyncedItemDocs};
+      } else {
+        const res = await loadItemsFromCollection();
+        nuevoItems = res.loadedItems;
+        nuevoSyncedMap = res.syncedMap;
+      }
       const catRes = await storageGet('taller-categorias-extra');
       nuevaCategoriasExtra = catRes && catRes.value ? JSON.parse(catRes.value) : [];
       const procRes = await storageGet('taller-procesos-extra');
@@ -945,15 +1017,20 @@ async function loadItems(){
       }
       cargado = true;
     }catch(e){
+      console.warn('Error cargando items desde Firestore', e);
       if(intento<3){ await sleep(500*intento); continue; }
       if(myGeneration !== loadGeneration) return; // el usuario ya guardo datos mas recientes (p.ej. restauro un respaldo); no pisar eso con un fallo de carga obsoleto
       items = [];
+      const raw = localStorage.getItem('taller_taller-items');
+      if(raw){ try{ items = JSON.parse(raw); }catch(e2){ /* respaldo local corrupto, seguimos con items vacio */ } }
       setStorageBanner(true, 'No se pudo cargar ni el guardado de Claude ni el guardado local de este navegador, tras varios intentos. Descarga un respaldo apenas puedas registrar algo, para no perderlo.');
     }
   }
   if(myGeneration !== loadGeneration) return; // esta carga quedo obsoleta: alguien guardo datos mas nuevos mientras estaba en curso
   if(cargado){
     items = nuevoItems;
+    lastSyncedItemDocs = nuevoSyncedMap;
+    localStorage.setItem('taller_taller-items', JSON.stringify(items));
     categoriasExtra = nuevaCategoriasExtra;
     procesosExtra = nuevoProcesosExtra;
     materialesExtra = nuevoMaterialesExtra;
@@ -962,7 +1039,6 @@ async function loadItems(){
     setStorageBanner(false);
     migrarNombresDeEstado();
   }
-  console.log('[DEBUG '+performance.now().toFixed(1)+'] loadItems() FIN, gen='+myGeneration+', showApp+render');
   showApp();
   render();
 }
@@ -1066,7 +1142,7 @@ function migrarNombresDeEstado(){
       cambiado = true;
     }
   });
-  if(cambiado){ console.log('[DEBUG '+performance.now().toFixed(1)+'] migrarNombresDeEstado -> cambiado=true, llamando saveItems() de nuevo'); saveItems(); }
+  if(cambiado) saveItems();
 }
 async function saveCategoriasExtra(){
   try{ await storageSet('taller-categorias-extra', JSON.stringify(categoriasExtra)); }
@@ -1099,15 +1175,15 @@ function handleCategoriaChange(sel){
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function saveItems(){
-  console.log('[DEBUG '+performance.now().toFixed(1)+'] saveItems() llamado (loadGeneration antes='+loadGeneration+')');
   loadGeneration++; // invalida cualquier loadItems() en curso: este guardado ya es el dato mas reciente
+  localStorage.setItem('taller_taller-items', JSON.stringify(items));
   for(let intento=1; intento<=3; intento++){
     try{
-      const res = await storageSet('taller-items', JSON.stringify(items));
-      if(!res) throw new Error('sin respuesta');
+      await writeItemsBatch(items);
       setStorageBanner(false);
       return;
     }catch(e){
+      console.warn('Error guardando items en Firestore', e);
       if(intento<3){ await sleep(500*intento); continue; }
       setStorageBanner(true, 'Este cambio NO se guardo despues de varios intentos. Descarga un respaldo de inmediato para no perderlo.');
     }
@@ -1161,7 +1237,6 @@ function handleImportFile(ev){
       procesosExtra = nuevosProcesos;
       materialesExtra = nuevosMateriales;
       if(nuevasMetas){ META_MIN = nuevasMetas.min || META_MIN; META_MAX = nuevasMetas.max || META_MAX; }
-      console.log('[DEBUG '+performance.now().toFixed(1)+'] handleImportFile -> restaurando, items.length='+items.length);
       saveItems();
       saveCategoriasExtra();
       saveProcesosExtra();

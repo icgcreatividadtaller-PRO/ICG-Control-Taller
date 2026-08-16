@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>ICG Control Taller</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%233F2364'%3E%3Ccircle cx='50' cy='50' r='30'/%3E%3Crect x='43' y='2' width='14' height='22' rx='3'/%3E%3Crect x='43' y='76' width='14' height='22' rx='3'/%3E%3Crect x='2' y='43' width='22' height='14' rx='3'/%3E%3Crect x='76' y='43' width='22' height='14' rx='3'/%3E%3Crect x='43' y='2' width='14' height='22' rx='3' transform='rotate(45 50 50)'/%3E%3Crect x='43' y='76' width='14' height='22' rx='3' transform='rotate(45 50 50)'/%3E%3Crect x='2' y='43' width='22' height='14' rx='3' transform='rotate(45 50 50)'/%3E%3Crect x='76' y='43' width='22' height='14' rx='3' transform='rotate(45 50 50)'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='15' fill='%23FDC901'/%3E%3Ccircle cx='50' cy='50' r='7' fill='%233F2364'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -769,6 +772,7 @@ async function getFirestoreHelpers(){
   return await withTimeout(window.__firebaseReady, 15000);
 }
 let lastKnownItemsValue = null;
+let itemsWritePending = false;
 async function storageGet(key){
   try{
     const fs = await getFirestoreHelpers();
@@ -788,7 +792,10 @@ async function storageGet(key){
 }
 async function storageSet(key, value){
   localStorage.setItem('taller_'+key, value);
-  if(key==='taller-items') lastKnownItemsValue = value;
+  if(key==='taller-items'){
+    lastKnownItemsValue = value;
+    itemsWritePending = true;
+  }
   try{
     const fs = await getFirestoreHelpers();
     await fs.setDoc(fs.doc(fs.db, 'taller', key), {value});
@@ -796,6 +803,8 @@ async function storageSet(key, value){
   }catch(e){
     console.warn('Firestore no disponible, se guardo solo en localStorage', key, e);
     return {value};
+  }finally{
+    if(key==='taller-items') itemsWritePending = false;
   }
 }
 function watchItemsRealtime(){
@@ -803,6 +812,10 @@ function watchItemsRealtime(){
     fs.onSnapshot(fs.doc(fs.db, 'taller', 'taller-items'), snap=>{
       if(!snap.exists() || snap.metadata.hasPendingWrites) return;
       if(editingId !== null) return;
+      // Si hay un guardado nuestro (storageSet) todavia en vuelo, cualquier evento que llegue aqui
+      // que no sea el eco de ese guardado es, por definicion, anterior a el: lo ignoramos para no
+      // pisar un cambio mas reciente del usuario (p.ej. restaurar un respaldo) con datos viejos.
+      if(itemsWritePending) return;
       const value = snap.data().value;
       if(value === lastKnownItemsValue) return;
       try{

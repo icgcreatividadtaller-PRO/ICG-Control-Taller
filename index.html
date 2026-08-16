@@ -795,6 +795,7 @@ async function storageSet(key, value){
   if(key==='taller-items'){
     lastKnownItemsValue = value;
     itemsWritePending = true;
+    console.log('[DEBUG '+performance.now().toFixed(1)+'] itemsWritePending = TRUE (storageSet start, key='+key+')');
   }
   try{
     const fs = await getFirestoreHelpers();
@@ -804,20 +805,25 @@ async function storageSet(key, value){
     console.warn('Firestore no disponible, se guardo solo en localStorage', key, e);
     return {value};
   }finally{
-    if(key==='taller-items') itemsWritePending = false;
+    if(key==='taller-items'){
+      itemsWritePending = false;
+      console.log('[DEBUG '+performance.now().toFixed(1)+'] itemsWritePending = FALSE (storageSet end, key='+key+')');
+    }
   }
 }
 function watchItemsRealtime(){
   getFirestoreHelpers().then(fs=>{
     fs.onSnapshot(fs.doc(fs.db, 'taller', 'taller-items'), snap=>{
-      if(!snap.exists() || snap.metadata.hasPendingWrites) return;
-      if(editingId !== null) return;
+      console.log('[DEBUG '+performance.now().toFixed(1)+'] onSnapshot FIRED. exists='+snap.exists()+' hasPendingWrites='+snap.metadata.hasPendingWrites+' itemsWritePending='+itemsWritePending+' editingId='+editingId);
+      if(!snap.exists() || snap.metadata.hasPendingWrites){ console.log('[DEBUG] -> ignorado (no existe o hasPendingWrites)'); return; }
+      if(editingId !== null){ console.log('[DEBUG] -> ignorado (editingId activo)'); return; }
       // Si hay un guardado nuestro (storageSet) todavia en vuelo, cualquier evento que llegue aqui
       // que no sea el eco de ese guardado es, por definicion, anterior a el: lo ignoramos para no
       // pisar un cambio mas reciente del usuario (p.ej. restaurar un respaldo) con datos viejos.
-      if(itemsWritePending) return;
+      if(itemsWritePending){ console.log('[DEBUG] -> ignorado (itemsWritePending activo)'); return; }
       const value = snap.data().value;
-      if(value === lastKnownItemsValue) return;
+      if(value === lastKnownItemsValue){ console.log('[DEBUG] -> ignorado (igual a lastKnownItemsValue)'); return; }
+      console.log('[DEBUG '+performance.now().toFixed(1)+'] -> APLICANDO snapshot: '+value.slice(0,120));
       try{
         items = JSON.parse(value);
         lastKnownItemsValue = value;
@@ -902,10 +908,11 @@ async function handleLogout(){
 function initAuthWatcher(){
   getFirestoreHelpers().then(fs=>{
     fs.onAuthStateChanged(fs.auth, user=>{
+      console.log('[DEBUG '+performance.now().toFixed(1)+'] onAuthStateChanged FIRED, user='+(user?user.email:null)+', watchStarted='+watchStarted);
       if(user){
         showLoadingScreen();
         loadItems();
-        if(!watchStarted){ watchStarted = true; watchItemsRealtime(); }
+        if(!watchStarted){ watchStarted = true; watchItemsRealtime(); console.log('[DEBUG '+performance.now().toFixed(1)+'] watchItemsRealtime() llamado por primera vez'); }
       } else {
         showLogin();
       }
@@ -917,6 +924,7 @@ function initAuthWatcher(){
 
 async function loadItems(){
   const myGeneration = ++loadGeneration;
+  console.log('[DEBUG '+performance.now().toFixed(1)+'] loadItems() INICIO, gen='+myGeneration);
   let cargado = false;
   let nuevoItems, nuevaCategoriasExtra, nuevoProcesosExtra, nuevoMaterialesExtra, nuevoMetaMin, nuevoMetaMax;
   for(let intento=1; intento<=3 && !cargado; intento++){
@@ -954,6 +962,7 @@ async function loadItems(){
     setStorageBanner(false);
     migrarNombresDeEstado();
   }
+  console.log('[DEBUG '+performance.now().toFixed(1)+'] loadItems() FIN, gen='+myGeneration+', showApp+render');
   showApp();
   render();
 }
@@ -1057,7 +1066,7 @@ function migrarNombresDeEstado(){
       cambiado = true;
     }
   });
-  if(cambiado) saveItems();
+  if(cambiado){ console.log('[DEBUG '+performance.now().toFixed(1)+'] migrarNombresDeEstado -> cambiado=true, llamando saveItems() de nuevo'); saveItems(); }
 }
 async function saveCategoriasExtra(){
   try{ await storageSet('taller-categorias-extra', JSON.stringify(categoriasExtra)); }
@@ -1090,6 +1099,7 @@ function handleCategoriaChange(sel){
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function saveItems(){
+  console.log('[DEBUG '+performance.now().toFixed(1)+'] saveItems() llamado (loadGeneration antes='+loadGeneration+')');
   loadGeneration++; // invalida cualquier loadItems() en curso: este guardado ya es el dato mas reciente
   for(let intento=1; intento<=3; intento++){
     try{
@@ -1151,6 +1161,7 @@ function handleImportFile(ev){
       procesosExtra = nuevosProcesos;
       materialesExtra = nuevosMateriales;
       if(nuevasMetas){ META_MIN = nuevasMetas.min || META_MIN; META_MAX = nuevasMetas.max || META_MAX; }
+      console.log('[DEBUG '+performance.now().toFixed(1)+'] handleImportFile -> restaurando, items.length='+items.length);
       saveItems();
       saveCategoriasExtra();
       saveProcesosExtra();

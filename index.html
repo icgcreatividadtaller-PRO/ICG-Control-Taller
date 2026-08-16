@@ -418,6 +418,7 @@
       <div class="tool-btn" onclick="exportBackup()"><span class="icon">&#8681;</span> Descargar respaldo</div>
       <div class="tool-btn" onclick="document.getElementById('import-file').click()"><span class="icon">&#8679;</span> Restaurar respaldo</div>
       <input type="file" id="import-file" accept="application/json" style="display:none;" onchange="handleImportFile(event)">
+      <div class="tool-btn" style="background:rgba(0,169,193,0.18); border-color:var(--cyan); color:var(--cyan);" onclick="testFieldSizeLimit()"><span class="icon">&#128300;</span> Prueba limite Firestore (temporal)</div>
       <div class="tool-btn logout" onclick="handleLogout()"><span class="icon">&#9099;</span> Cerrar sesion</div>
     </div>
   </div>
@@ -871,6 +872,49 @@ async function migrarDocUnicoSiExiste(){
   await fs.deleteDoc(oldRef);
   console.log('[DEBUG] Migracion completa: '+oldItems.length+' proyecto(s) movidos a la coleccion "'+ITEMS_COLLECTION+'", documento viejo borrado.');
   return oldItems;
+}
+
+// PRUEBA TEMPORAL: escribe 3 documentos de prueba controlados en taller_items para determinar
+// con precision el limite real de tamano de campo en Firestore (no se guarda en el estado de la
+// app, se borra solo al terminar). Quitar este boton y esta funcion una vez confirmado el limite.
+async function testFieldSizeLimit(){
+  function bytesString(n){
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let s = '';
+    for(let i=0;i<n;i++) s += chars[i % chars.length];
+    return s;
+  }
+  const fs = await getFirestoreHelpers();
+  const pruebas = [
+    { nombre: 'Campo ANIDADO (fotoFinal.data) de 1500 bytes', id: 'zzz-test-nested-1500',
+      data: { cliente:'TEST LIMITE', descripcion:'prueba', fotoFinal: { data: bytesString(1500), nombre:'t', tipo:'t' } } },
+    { nombre: 'Campo ANIDADO (fotoFinal.data) de 1600 bytes', id: 'zzz-test-nested-1600',
+      data: { cliente:'TEST LIMITE', descripcion:'prueba', fotoFinal: { data: bytesString(1600), nombre:'t', tipo:'t' } } },
+    { nombre: 'Campo de NIVEL SUPERIOR (descripcion) de 1600 bytes, sin anidar', id: 'zzz-test-flat-1600',
+      data: { cliente:'TEST LIMITE', descripcion: bytesString(1600) } }
+  ];
+  const resumen = [];
+  console.log('%c=== INICIO PRUEBA DE LIMITE DE CAMPO EN FIRESTORE ===', 'font-weight:bold;color:#00A9C1;');
+  for(const p of pruebas){
+    const ref = fs.doc(fs.db, ITEMS_COLLECTION, p.id);
+    const tamanoTotal = new Blob([JSON.stringify(p.data)]).size;
+    let linea;
+    try{
+      await fs.setDoc(ref, p.data);
+      linea = p.nombre+' | payload total: '+tamanoTotal+' bytes | RESULTADO: EXITO (se guardo sin error)';
+    }catch(e){
+      linea = p.nombre+' | payload total: '+tamanoTotal+' bytes | RESULTADO: FALLO | code='+e.code+' | message="'+e.message+'"';
+    }
+    console.log('[LIMITE-TEST] '+linea);
+    resumen.push(linea);
+  }
+  console.log('%c=== FIN PRUEBA. Borrando documentos de prueba... ===', 'font-weight:bold;color:#00A9C1;');
+  for(const p of pruebas){
+    try{ await fs.deleteDoc(fs.doc(fs.db, ITEMS_COLLECTION, p.id)); console.log('[LIMITE-TEST] Borrado: '+p.id); }
+    catch(e){ console.log('[LIMITE-TEST] No se pudo borrar '+p.id+' (probablemente nunca se creo): '+e.message); }
+  }
+  console.log('%c=== LIMPIEZA COMPLETA ===', 'font-weight:bold;color:#00A9C1;');
+  alert('Prueba de limite de Firestore terminada. Resultados:\n\n'+resumen.join('\n\n')+'\n\nCopia tambien las lineas [LIMITE-TEST] de la consola y pasaselas a Claude.');
 }
 
 function watchItemsRealtime(){

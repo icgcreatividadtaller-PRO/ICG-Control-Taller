@@ -2380,6 +2380,9 @@ function rowHtml(it, orderNum){
         </select>
         ${alertLevel==='vencido' ? ' <span style="color:var(--magenta); font-size:10.5px; font-weight:700;">Vencido</span>' : alertLevel==='atencion' ? ' <span style="color:#8A6A00; font-size:10.5px; font-weight:700;">Estancado</span>' : ''}
         ${isCriticalAlert(it) ? ' <span style="color:var(--magenta); font-size:10.5px; font-weight:800;">&#9888; Atrasado</span>' : ''}
+        ${it.pausado
+          ? ` <span class="tag" style="background:var(--neutral-bg); color:var(--ink-2); cursor:pointer;" onclick="reanudarProyecto('${it.id}', event)">${pausaIcon(it)} Reanudar</span>`
+          : (puedePausar(it) ? ` <span class="tag" style="background:var(--neutral-bg); color:var(--ink-2); cursor:pointer;" onclick="pausarProyecto('${it.id}', event)">${pausaIcon(it)} ${pausaAccionLabel(it)}</span>` : '')}
       </td>
       <td>${prioHtml(it)}</td>
       <td>${it.categoria ? `<span class="cat-tag">${it.categoria}</span>` : '<span class="dash">-</span>'}</td>

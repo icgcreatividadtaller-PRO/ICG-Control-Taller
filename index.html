@@ -513,9 +513,14 @@
       <span id="f-facturado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
     <div class="oc-line" id="field-pago-contado-line">
-      <input type="checkbox" id="f-pago-contado">
-      <label style="margin:0;">Pago de Contado</label>
+      <input type="checkbox" id="f-pago-contado" onclick="if(this.checked){ document.getElementById('f-pendiente-pago').checked=false; }">
+      <label style="margin:0;">Pagado</label>
       <span id="f-pago-contado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
+    </div>
+    <div class="oc-line" id="field-pendiente-pago-line">
+      <input type="checkbox" id="f-pendiente-pago" onclick="if(this.checked){ document.getElementById('f-pago-contado').checked=false; }">
+      <label style="margin:0;">Entregado / Pendiente de Pago</label>
+      <span id="f-pendiente-pago-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
     <div class="field" id="field-estado" style="display:none;">
       <label>Estado</label>
@@ -1756,6 +1761,7 @@ function renderPanorama(activos){
   const todosPausados = activos.filter(it=>it.pausado);
   const faltaFacturar = activos.filter(it=>it.estado==='Entregado' && !it.facturado);
   const pendientesCotizar = activos.filter(it=>it.estado==='Pendiente de cotizar');
+  const pendientesPago = activos.filter(it=>it.pendientePago);
 
   const sortByDias = list => [...list].sort((a,b)=>daysSince(b.fechaRecibido)-daysSince(a.fechaRecibido));
 
@@ -1764,7 +1770,8 @@ function renderPanorama(activos){
     panoramaGroup('panorama-atrasados', 'Atrasados', sortByDias(atrasados), it=>daysSince(it.fechaRecibido)+'d totales'),
     panoramaGroup('panorama-facturar', 'Falta Facturar', sortByDias(faltaFacturar), it=>it.monto?formatMoney(it.monto):'-'),
     panoramaGroup('panorama-pausados', 'Pausados', sortByDias(todosPausados), it=>`[${pausaLabel(it)}] Desde ${fmtDate(it.fechaPausado)}`),
-    panoramaGroup('panorama-pend-cotizar', 'Pendientes de Cotizar', sortByDias(pendientesCotizar), it=>daysSince(it.fechaRecibido)+'d en fila')
+    panoramaGroup('panorama-pend-cotizar', 'Pendientes de Cotizar', sortByDias(pendientesCotizar), it=>daysSince(it.fechaRecibido)+'d en fila'),
+    panoramaGroup('panorama-pend-pago', 'Pendientes de Pago', sortByDias(pendientesPago), it=>(it.monto?formatMoney(it.monto):'-')+' &middot; Desde '+fmtDate(it.fechaPendientePago))
   ].join('');
 }
 
@@ -2015,6 +2022,8 @@ function openModal(prefillId){
     document.getElementById('f-facturado-fecha').textContent = it.fechaFacturado ? ('Desde '+fmtDate(it.fechaFacturado)) : '';
     document.getElementById('f-pago-contado').checked = !!it.pagoContado;
     document.getElementById('f-pago-contado-fecha').textContent = it.fechaPagoContado ? ('Desde '+fmtDate(it.fechaPagoContado)) : '';
+    document.getElementById('f-pendiente-pago').checked = !!it.pendientePago;
+    document.getElementById('f-pendiente-pago-fecha').textContent = it.fechaPendientePago ? ('Desde '+fmtDate(it.fechaPendientePago)) : '';
     document.getElementById('f-numero-oc').value = it.numeroOC||'';
     document.getElementById('f-numero-oc').disabled = !it.tieneOC;
     document.getElementById('f-notas').value = it.notas||'';
@@ -2049,6 +2058,8 @@ function openModal(prefillId){
     document.getElementById('f-facturado-fecha').textContent = '';
     document.getElementById('f-pago-contado').checked = false;
     document.getElementById('f-pago-contado-fecha').textContent = '';
+    document.getElementById('f-pendiente-pago').checked = false;
+    document.getElementById('f-pendiente-pago-fecha').textContent = '';
     document.getElementById('f-numero-oc').disabled = true;
     catSel.value = 'Offset';
     buildCategoriaSelect('Offset');
@@ -2094,7 +2105,11 @@ function saveModal(){
     const prevTieneOC = it.tieneOC;
     const nuevoEstadoElegido = document.getElementById('f-estado').value;
     const facturadoNuevo = document.getElementById('f-facturado').checked;
-    const pagoContadoNuevo = document.getElementById('f-pago-contado').checked;
+    let pagoContadoNuevo = document.getElementById('f-pago-contado').checked;
+    let pendientePagoNuevo = document.getElementById('f-pendiente-pago').checked;
+    if(pagoContadoNuevo && pendientePagoNuevo){
+      if(!it.pagoContado){ pendientePagoNuevo = false; } else { pagoContadoNuevo = false; }
+    }
     Object.assign(it, base);
 
     if(facturadoNuevo && !it.facturado){ it.fechaFacturado = todayStr(); }
@@ -2104,6 +2119,10 @@ function saveModal(){
     if(pagoContadoNuevo && !it.pagoContado){ it.fechaPagoContado = todayStr(); }
     if(!pagoContadoNuevo){ it.fechaPagoContado = null; }
     it.pagoContado = pagoContadoNuevo;
+
+    if(pendientePagoNuevo && !it.pendientePago){ it.fechaPendientePago = todayStr(); }
+    if(!pendientePagoNuevo){ it.fechaPendientePago = null; }
+    it.pendientePago = pendientePagoNuevo;
 
     let finalEstado = nuevoEstadoElegido;
     if(nuevoEstadoElegido === prevEstado && origen==='cotizacion'){
@@ -2117,7 +2136,9 @@ function saveModal(){
   } else {
     const estadoInicial = origen==='cotizacion' ? 'Pendiente de cotizar' : 'Pendiente';
     const facturadoInicial = document.getElementById('f-facturado').checked;
-    const pagoContadoInicial = document.getElementById('f-pago-contado').checked;
+    let pagoContadoInicial = document.getElementById('f-pago-contado').checked;
+    let pendientePagoInicial = document.getElementById('f-pendiente-pago').checked;
+    if(pagoContadoInicial && pendientePagoInicial){ pendientePagoInicial = false; }
     items.push(Object.assign({}, base, {
       id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
       estado: estadoInicial,
@@ -2125,9 +2146,11 @@ function saveModal(){
       fechaCotizado: null, fechaAprobado: null, fechaCerrado: null,
       facturado: facturadoInicial,
       pagoContado: pagoContadoInicial,
+      pendientePago: pendientePagoInicial,
       archivado: false,
       fechaFacturado: facturadoInicial ? todayStr() : null,
       fechaPagoContado: pagoContadoInicial ? todayStr() : null,
+      fechaPendientePago: pendientePagoInicial ? todayStr() : null,
       historial: [{estado: estadoInicial, ts: new Date().toISOString()}]
     }));
   }
@@ -2716,6 +2739,7 @@ function render(){
     if(it.pausado) panoramaIds.add(it.id);
     if(it.estado==='Entregado' && !it.facturado) panoramaIds.add(it.id);
     if(it.estado==='Pendiente de cotizar') panoramaIds.add(it.id);
+    if(it.pendientePago) panoramaIds.add(it.id);
   });
   document.getElementById('count-panorama').textContent = panoramaIds.size;
   document.getElementById('count-listado').textContent = items.length;

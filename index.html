@@ -2089,12 +2089,14 @@ function resolvedCategoria(){
 function saveModal(){
   const cliente = document.getElementById('f-cliente').value.trim().toUpperCase();
   if(!cliente){ alert('Escribe el nombre del cliente.'); return; }
+  const tipoClienteVal = resolvedTipoCliente();
+  if(!editingId && !tipoClienteVal){ alert('Selecciona el Tipo de Cliente: Counter o Corporativa.'); return; }
   const origen = document.getElementById('f-origen').value;
   const montoVal = document.getElementById('f-monto').value;
   const base = {
     origen,
     cliente,
-    tipoCliente: resolvedTipoCliente(),
+    tipoCliente: tipoClienteVal,
     categoria: resolvedCategoria(),
     prioridad: document.getElementById('f-prioridad').value,
     descripcion: document.getElementById('f-descripcion').value.trim(),
@@ -2798,7 +2800,7 @@ function render(){
       content.innerHTML = renderPanorama(active);
     } else if(view==='listado'){
       subtabsHolder.innerHTML = `<div class="subtabs"><button class="subtab" onclick="imprimirListado()">&#128424; Imprimir listado</button></div>`;
-      content.innerHTML = renderListado(searched);
+      content.innerHTML = renderListado(active);
     } else {
       subtabsHolder.innerHTML = '';
       content.innerHTML = renderArchive(searched);

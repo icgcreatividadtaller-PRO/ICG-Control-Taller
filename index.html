@@ -1512,7 +1512,10 @@ function openOrdenProduccion(id){
   if(opTieneContenido(op)){
     archBtn.innerHTML = op.archivada
       ? `<button type="button" class="btn-ghost" style="width:100%;" onclick="desarchivarOP()">&#8617; Sacar OP del archivo</button>`
-      : `<button type="button" class="btn-ghost" style="width:100%;" onclick="archivarOP()">&#128230; Archivar esta OP</button>`;
+      : `<div style="display:flex; gap:8px;">
+          <button type="button" class="btn-ghost" style="flex:1;" onclick="archivarOP()">&#128230; Archivar esta OP</button>
+          <button type="button" class="btn-ghost" style="flex:1;" onclick="confirmarOrdenCompletadaModal()">&#9989; Orden Completada</button>
+        </div>`;
   } else {
     archBtn.innerHTML = '';
   }
@@ -1547,6 +1550,12 @@ function archivarOP(){
   saveItems();
   closeOrdenProduccion();
   render();
+}
+function confirmarOrdenCompletadaModal(){
+  const it = items.find(i=>i.id===opItemId);
+  if(!it || !it.ordenProduccion) return;
+  if(!confirm(`Vas a marcar la OP de "${it.cliente}" como Completada. Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`)) return;
+  archivarOP();
 }
 function desarchivarOP(){
   const it = items.find(i=>i.id===opItemId);
@@ -1612,27 +1621,8 @@ function opCardHtml(it){
         <button class="btn-ghost" style="flex:1;" onclick="openOrdenProduccion('${it.id}')">${tieneOP?'Editar OP':'Crear OP'}</button>
         ${!tieneOP ? `<button class="btn-ghost" onclick="marcarOpNoAplica('${it.id}', event)">N/A</button>` : ''}
         ${tieneOP ? `<button class="btn-ghost" onclick="opItemId='${it.id}'; printOrdenProduccion()">Imprimir</button>` : ''}
-        ${tieneOP && !op.archivada ? `<button class="btn-ghost" onclick="confirmarOrdenCompletada('${it.id}', event)">&#9989; Orden Completada</button>` : ''}
-        ${tieneOP && op.archivada ? `<button class="btn-ghost" onclick="reabrirOrdenDesdeTarjeta('${it.id}', event)">&#8617; Reabrir OP</button>` : ''}
       </div>
     </div>`;
-}
-function confirmarOrdenCompletada(id, ev){
-  if(ev) ev.stopPropagation();
-  const it = items.find(i=>i.id===id);
-  if(!it || !it.ordenProduccion) return;
-  if(!confirm(`Vas a marcar la OP de "${it.cliente}" como Completada. Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`)) return;
-  it.ordenProduccion.archivada = true;
-  saveItems();
-  render();
-}
-function reabrirOrdenDesdeTarjeta(id, ev){
-  if(ev) ev.stopPropagation();
-  const it = items.find(i=>i.id===id);
-  if(!it || !it.ordenProduccion) return;
-  it.ordenProduccion.archivada = false;
-  saveItems();
-  render();
 }
 function marcarOpNoAplica(id, ev){
   if(ev) ev.stopPropagation();

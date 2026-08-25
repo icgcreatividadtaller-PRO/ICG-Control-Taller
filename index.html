@@ -1612,8 +1612,27 @@ function opCardHtml(it){
         <button class="btn-ghost" style="flex:1;" onclick="openOrdenProduccion('${it.id}')">${tieneOP?'Editar OP':'Crear OP'}</button>
         ${!tieneOP ? `<button class="btn-ghost" onclick="marcarOpNoAplica('${it.id}', event)">N/A</button>` : ''}
         ${tieneOP ? `<button class="btn-ghost" onclick="opItemId='${it.id}'; printOrdenProduccion()">Imprimir</button>` : ''}
+        ${tieneOP && !op.archivada ? `<button class="btn-ghost" onclick="confirmarOrdenCompletada('${it.id}', event)">&#9989; Orden Completada</button>` : ''}
+        ${tieneOP && op.archivada ? `<button class="btn-ghost" onclick="reabrirOrdenDesdeTarjeta('${it.id}', event)">&#8617; Reabrir OP</button>` : ''}
       </div>
     </div>`;
+}
+function confirmarOrdenCompletada(id, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id);
+  if(!it || !it.ordenProduccion) return;
+  if(!confirm(`Vas a marcar la OP de "${it.cliente}" como Completada. Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`)) return;
+  it.ordenProduccion.archivada = true;
+  saveItems();
+  render();
+}
+function reabrirOrdenDesdeTarjeta(id, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id);
+  if(!it || !it.ordenProduccion) return;
+  it.ordenProduccion.archivada = false;
+  saveItems();
+  render();
 }
 function marcarOpNoAplica(id, ev){
   if(ev) ev.stopPropagation();
@@ -1629,18 +1648,18 @@ function renderOrdenes(active){
   const elegibles = active.filter(it=>opDisponible(it) && !(it.opNoAplica && !opTieneContenido(it.ordenProduccion)));
   const conOP = elegibles.filter(it=>opTieneContenido(it.ordenProduccion));
   const activas = conOP.filter(it=>!it.ordenProduccion.archivada);
-  const cerradas = conOP.filter(it=>it.ordenProduccion.archivada);
+  const completadas = conOP.filter(it=>it.ordenProduccion.archivada);
   const sinOP = elegibles.filter(it=>!opTieneContenido(it.ordenProduccion));
 
   const subtabsHtml = `<div class="subtabs">
     <button class="subtab ${ordenesSubView==='activas'?'active':''}" onclick="setOrdenesSubView('activas')">Ordenes activas (${activas.length + sinOP.length})</button>
-    <button class="subtab ${ordenesSubView==='cerradas'?'active':''}" onclick="setOrdenesSubView('cerradas')">Ordenes cerradas (${cerradas.length})</button>
+    <button class="subtab ${ordenesSubView==='completadas'?'active':''}" onclick="setOrdenesSubView('completadas')">Ordenes Completadas (${completadas.length})</button>
   </div>`;
 
   let lista;
-  if(ordenesSubView==='cerradas'){
-    lista = cerradas;
-    if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">Aun no has archivado ninguna orden</div>Cuando cierres un proyecto, archiva su OP desde adentro del formulario.</div>';
+  if(ordenesSubView==='completadas'){
+    lista = completadas;
+    if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">Aun no has completado ninguna orden</div>Marca una orden como completada desde su tarjeta cuando termines la produccion.</div>';
   } else {
     lista = [...sinOP, ...activas];
     if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">No hay ordenes de produccion todavia</div>Entra a la ficha de un proyecto en produccion y crea su Orden ahi, o marca N/A si no aplica.</div>';

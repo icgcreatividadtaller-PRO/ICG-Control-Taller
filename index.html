@@ -2512,12 +2512,12 @@ function renderCalendar(active){
   `;
 }
 
-function weekLabelFor(monday, saturday){
+function weekLabelFor(monday, sunday){
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  if(monday.getMonth()===saturday.getMonth()){
-    return `${monday.getDate()}-${saturday.getDate()} ${meses[monday.getMonth()]} ${monday.getFullYear()}`;
+  if(monday.getMonth()===sunday.getMonth()){
+    return `${monday.getDate()}-${sunday.getDate()} ${meses[monday.getMonth()]} ${monday.getFullYear()}`;
   }
-  return `${monday.getDate()} ${meses[monday.getMonth()]} - ${saturday.getDate()} ${meses[saturday.getMonth()]} ${saturday.getFullYear()}`;
+  return `${monday.getDate()} ${meses[monday.getMonth()]} - ${sunday.getDate()} ${meses[sunday.getMonth()]} ${sunday.getFullYear()}`;
 }
 function weekKeyFor(dateStr){
   const d = new Date(dateStr+'T00:00:00');
@@ -2543,8 +2543,8 @@ function renderArchive(lista){
 
   return sortedKeys.map(key=>{
     const monday = new Date(key+'T00:00:00');
-    const saturday = new Date(monday); saturday.setDate(monday.getDate()+5);
-    const label = weekLabelFor(monday, saturday);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+    const label = weekLabelFor(monday, sunday);
     const list = groups.get(key).sort((a,b)=>{
       const da = a.fechaCerrado||a.fechaUltimoCambio, db = b.fechaCerrado||b.fechaUltimoCambio;
       return db.localeCompare(da);
@@ -2591,8 +2591,8 @@ function getWeekRange(offset){
   const today = new Date(); today.setHours(0,0,0,0);
   const thisMonday = mondayOf(today);
   const monday = new Date(thisMonday); monday.setDate(thisMonday.getDate()+offset*7);
-  const saturday = new Date(monday); saturday.setDate(monday.getDate()+5);
-  return {monday, saturday};
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  return {monday, sunday};
 }
 function fmtShort(d){
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -2665,9 +2665,9 @@ function toggleResumenDrilldown(tipo){
 }
 
 function renderResumen(){
-  const {monday, saturday} = getWeekRange(weekOffset);
-  const mondayDs = toDs(monday), saturdayDs = toDs(saturday);
-  const inRange = ds => ds && ds>=mondayDs && ds<=saturdayDs;
+  const {monday, sunday} = getWeekRange(weekOffset);
+  const mondayDs = toDs(monday), sundayDs = toDs(sunday);
+  const inRange = ds => ds && ds>=mondayDs && ds<=sundayDs;
 
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
   const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
@@ -2683,16 +2683,16 @@ function renderResumen(){
   const todayDs = todayStr();
   let diasTranscurridos;
   if(todayDs < mondayDs) diasTranscurridos = 0;
-  else if(todayDs > saturdayDs) diasTranscurridos = 6;
+  else if(todayDs > sundayDs) diasTranscurridos = 7;
   else diasTranscurridos = Math.floor((new Date(todayDs) - monday) / 86400000) + 1;
 
   const pctOfMin = facturadoTotal / META_MIN;
-  const expectedFraction = diasTranscurridos / 6;
+  const expectedFraction = diasTranscurridos / 7;
   const diffPts = (pctOfMin - expectedFraction) * 100;
 
   let mensaje;
   if(facturadoTotal >= META_MAX) mensaje = 'Excelente semana';
-  else if(diasTranscurridos >= 6 && facturadoTotal < META_MIN) mensaje = 'Por debajo de la meta - mejor suerte la proxima semana';
+  else if(diasTranscurridos >= 7 && facturadoTotal < META_MIN) mensaje = 'Por debajo de la meta - mejor suerte la proxima semana';
   else if(facturadoTotal >= META_MIN) mensaje = 'Meta alcanzada, vas muy bien';
   else if(diffPts >= 15) mensaje = 'Vas adelantado, excelente ritmo';
   else if(diffPts >= -10) mensaje = 'Vas bien, sigue asi';
@@ -2724,7 +2724,7 @@ function renderResumen(){
   document.getElementById('resumen-body').innerHTML = `
     <div class="resumen-week-nav">
       <button class="btn-icon" onclick="navWeek(-1)">&#8249;</button>
-      <div class="resumen-week-label">${fmtShort(monday)} - ${fmtShort(saturday)}</div>
+      <div class="resumen-week-label">${fmtShort(monday)} - ${fmtShort(sunday)}</div>
       <button class="btn-icon" onclick="navWeek(1)">&#8250;</button>
     </div>
     <div class="resumen-stats">

@@ -444,7 +444,7 @@
       <select class="filter" id="filter-origen" onchange="render()">
         <option value="">Todos los origenes</option>
         <option value="cotizacion">Cotizacion</option>
-        <option value="directo">Counter</option>
+        <option value="directo">Directo (sin cotizar)</option>
       </select>
       <select class="filter" id="filter-tipo" onchange="render()">
         <option value="">Todos los tipos</option>
@@ -475,7 +475,7 @@
         <label>Origen</label>
         <select id="f-origen" onchange="handleOrigenChange()">
           <option value="cotizacion">Pide cotizacion</option>
-          <option value="directo">Counter</option>
+          <option value="directo">Directo (sin cotizar)</option>
         </select>
       </div>
       <div class="field">
@@ -1978,7 +1978,7 @@ function printFicha(){
     <div class="print-title">Ficha de proyecto &mdash; ${it.cliente}</div>
     <div class="print-row"><b>Estado actual</b><span>${it.estado}</span></div>
     <div class="print-row"><b>Categoria</b><span>${it.categoria||'-'}</span></div>
-    <div class="print-row"><b>Origen</b><span>${it.origen==='cotizacion'?'Pide cotizacion':'Counter'}</span></div>
+    <div class="print-row"><b>Origen</b><span>${it.origen==='cotizacion'?'Pide cotizacion':'Directo (sin cotizar)'}</span></div>
     <div class="print-row"><b>Tipo de Cliente</b><span>${it.tipoCliente==='counter'?'Counter':it.tipoCliente==='corporativa'?'Corporativa':'-'}</span></div>
     <div class="print-row"><b>Canal</b><span>${it.canal==='whatsapp'?'WhatsApp':it.canal==='correo'?'Correo':'Personal'}</span></div>
     <div class="print-row"><b>Descripcion</b><span>${it.descripcion||'-'}</span></div>

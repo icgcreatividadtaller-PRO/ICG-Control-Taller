@@ -2765,7 +2765,7 @@ function render(){
   document.getElementById('count-activos').textContent = items.filter(i=>!i.archivado && !ESTADOS_COTIZACION.includes(i.estado)).length;
   document.getElementById('count-cotizaciones').textContent = items.filter(i=>!i.archivado && i.origen==='cotizacion' && ESTADOS_COTIZACION.includes(i.estado)).length;
   document.getElementById('count-archivo').textContent = items.filter(i=>i.archivado).length;
-  document.getElementById('count-ordenes').textContent = items.filter(i=>!i.archivado && opDisponible(i)).length;
+  document.getElementById('count-ordenes').textContent = items.filter(i=>!i.archivado && opDisponible(i) && !(i.opNoAplica && !opTieneContenido(i.ordenProduccion))).length;
   const panoramaIds = new Set();
   items.filter(it=>!it.archivado).forEach(it=>{
     if(getAlert(it)==='atencion') panoramaIds.add(it.id);

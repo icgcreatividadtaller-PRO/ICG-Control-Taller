@@ -483,6 +483,7 @@
         <select id="f-canal">
           <option value="whatsapp">WhatsApp</option>
           <option value="correo">Correo</option>
+          <option value="telefono">Telefono</option>
           <option value="otro">Personal</option>
         </select>
       </div>
@@ -1980,7 +1981,7 @@ function printFicha(){
     <div class="print-row"><b>Categoria</b><span>${it.categoria||'-'}</span></div>
     <div class="print-row"><b>Origen</b><span>${it.origen==='cotizacion'?'Pide cotizacion':'Directo (sin cotizar)'}</span></div>
     <div class="print-row"><b>Tipo de Cliente</b><span>${it.tipoCliente==='counter'?'Counter':it.tipoCliente==='corporativa'?'Corporativa':'-'}</span></div>
-    <div class="print-row"><b>Canal</b><span>${it.canal==='whatsapp'?'WhatsApp':it.canal==='correo'?'Correo':'Personal'}</span></div>
+    <div class="print-row"><b>Canal</b><span>${it.canal==='whatsapp'?'WhatsApp':it.canal==='correo'?'Correo':it.canal==='telefono'?'Telefono':'Personal'}</span></div>
     <div class="print-row"><b>Descripcion</b><span>${it.descripcion||'-'}</span></div>
     <div class="print-row"><b>Monto</b><span>${it.monto ? formatMoney(it.monto) : '-'}</span></div>
     <div class="print-row"><b>Orden de compra</b><span>${it.tieneOC ? (it.numeroOC||'Si, sin numero') : 'No'}</span></div>

@@ -2346,9 +2346,39 @@ function sortActive(list){
   return [...list].sort((a,b)=> (prioWeight(b.prioridad)-prioWeight(a.prioridad)) || a.fechaRecibido.localeCompare(b.fechaRecibido));
 }
 
+let cotizacionesSubView = 'activas';
+function setCotizacionesSubView(v){ cotizacionesSubView = v; render(); }
+function cotizacionRechazadaRowHtml(it){
+  return `
+      <div class="archive-row">
+        <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+        <span class="cat-tag">${it.categoria||'-'}</span>
+        <b>${it.cliente}</b>
+        <span class="archive-desc">${it.descripcion||''}</span>
+        ${it.monto ? `<span class="money-tag">${formatMoney(it.monto)}</span>` : ''}
+        <span class="archive-date">${it.fechaUltimoCambio}</span>
+        <button class="icon-btn" onclick="openModal('${it.id}')">Ver</button>
+        <button class="icon-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar</button>
+      </div>`;
+}
 function renderCotizaciones(active, orderMap){
   const enCotizacion = active.filter(it=>it.origen==='cotizacion' && ESTADOS_COTIZACION.includes(it.estado));
+  const noAprobados = active.filter(it=>it.origen==='cotizacion' && it.estado===ESTADO_RECHAZADO);
   const totalCount = enCotizacion.length;
+
+  const subtabsHtml = `<div class="subtabs">
+    <button class="subtab ${cotizacionesSubView==='activas'?'active':''}" onclick="setCotizacionesSubView('activas')">Cotizaciones en curso (${totalCount})</button>
+    <button class="subtab ${cotizacionesSubView==='noaprobados'?'active':''}" onclick="setCotizacionesSubView('noaprobados')">&#128193; No Aprobados (${noAprobados.length})</button>
+  </div>`;
+
+  if(cotizacionesSubView==='noaprobados'){
+    if(!noAprobados.length){
+      return subtabsHtml + '<div class="empty-state"><div class="big">No hay cotizaciones no aprobadas</div>Cuando rechaces una cotizacion, cae directo aqui, sin ocupar espacio en el tablero.</div>';
+    }
+    const ordenados = [...noAprobados].sort((a,b)=>(b.fechaUltimoCambio||'').localeCompare(a.fechaUltimoCambio||''));
+    return subtabsHtml + `<div class="group-block"><div class="group-table-wrap">${ordenados.map(it=>cotizacionRechazadaRowHtml(it)).join('')}</div></div>`;
+  }
+
   const cols = ESTADOS_COTIZACION.map(estado=>{
     const cardsHere = sortActive(enCotizacion.filter(it=>it.estado===estado));
     return `
@@ -2357,7 +2387,7 @@ function renderCotizaciones(active, orderMap){
         <div class="col-body">${cardsHere.length ? cardsHere.map(it=>cardHtml(it, orderMap.get(it.id))).join('') : '<div class="col-empty">Vacio</div>'}</div>
       </div>`;
   }).join('');
-  return `
+  return subtabsHtml + `
     <div class="phase phase-pendiente">
       <div class="phase-head"><span class="phase-dot"></span><span class="phase-title">Cotizaciones en curso</span><span class="phase-count">${totalCount}</span><div class="phase-bar"></div></div>
       <div class="board">${cols}</div>
@@ -2524,35 +2554,8 @@ function weekKeyFor(dateStr){
   const d = new Date(dateStr+'T00:00:00');
   return toDs(mondayOf(d));
 }
-function renderArchive(lista){
-  const totalArchivados = items.filter(it=>it.archivado).length;
-  const closed = lista.filter(it=>it.archivado);
-  if(!closed.length){
-    return totalArchivados === 0
-      ? '<div class="empty-state"><div class="big">Aun no hay nada archivado</div>Los proyectos que archives manualmente apareceran aqui.</div>'
-      : '<div class="empty-state"><div class="big">Nada archivado coincide con estos filtros</div></div>';
-  }
-
-  const groups = new Map();
-  closed.forEach(it=>{
-    const dateForGrouping = it.fechaCerrado || it.fechaUltimoCambio;
-    const key = weekKeyFor(dateForGrouping);
-    if(!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(it);
-  });
-  const sortedKeys = Array.from(groups.keys()).sort((a,b)=>b.localeCompare(a));
-
-  return sortedKeys.map(key=>{
-    const monday = new Date(key+'T00:00:00');
-    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
-    const label = weekLabelFor(monday, sunday);
-    const list = groups.get(key).sort((a,b)=>{
-      const da = a.fechaCerrado||a.fechaUltimoCambio, db = b.fechaCerrado||b.fechaUltimoCambio;
-      return db.localeCompare(da);
-    });
-    const groupKey = 'archivo-'+key;
-    const collapsed = collapsedGroups[groupKey];
-    const rowsHtml = list.map(it=>`
+function archiveRowHtml(it){
+  return `
       <div class="archive-row">
         <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
         <span class="cat-tag">${it.categoria||'-'}</span>
@@ -2565,7 +2568,57 @@ function renderArchive(lista){
         <span class="archive-date">${it.fechaUltimoCambio}</span>
         <button class="icon-btn" onclick="desarchivarProyecto('${it.id}', event)">&#8617; Sacar</button>
         <button class="icon-btn" onclick="openModal('${it.id}')">Ver</button>
-      </div>`).join('');
+      </div>`;
+}
+let archiveSubView = 'todo';
+function setArchiveSubView(v){ archiveSubView = v; render(); }
+function renderArchive(lista){
+  const totalArchivados = items.filter(it=>it.archivado).length;
+  const closed = lista.filter(it=>it.archivado);
+  const noAprobados = closed.filter(it=>it.estado===ESTADO_RECHAZADO);
+
+  const subtabsHtml = `<div class="subtabs">
+    <button class="subtab ${archiveSubView==='todo'?'active':''}" onclick="setArchiveSubView('todo')">Todo (${closed.length})</button>
+    <button class="subtab ${archiveSubView==='noaprobados'?'active':''}" onclick="setArchiveSubView('noaprobados')">No Aprobados (${noAprobados.length})</button>
+  </div>`;
+
+  if(!closed.length){
+    return totalArchivados === 0
+      ? '<div class="empty-state"><div class="big">Aun no hay nada archivado</div>Los proyectos que archives manualmente apareceran aqui.</div>'
+      : '<div class="empty-state"><div class="big">Nada archivado coincide con estos filtros</div></div>';
+  }
+
+  if(archiveSubView==='noaprobados'){
+    if(!noAprobados.length){
+      return subtabsHtml + '<div class="empty-state"><div class="big">No hay proyectos No Aprobados archivados</div></div>';
+    }
+    const ordenados = [...noAprobados].sort((a,b)=>{
+      const da = a.fechaCerrado||a.fechaUltimoCambio, db = b.fechaCerrado||b.fechaUltimoCambio;
+      return db.localeCompare(da);
+    });
+    return subtabsHtml + `<div class="group-block"><div class="group-table-wrap">${ordenados.map(it=>archiveRowHtml(it)).join('')}</div></div>`;
+  }
+
+  const groups = new Map();
+  closed.forEach(it=>{
+    const dateForGrouping = it.fechaCerrado || it.fechaUltimoCambio;
+    const key = weekKeyFor(dateForGrouping);
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
+  });
+  const sortedKeys = Array.from(groups.keys()).sort((a,b)=>b.localeCompare(a));
+
+  return subtabsHtml + sortedKeys.map(key=>{
+    const monday = new Date(key+'T00:00:00');
+    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+    const label = weekLabelFor(monday, sunday);
+    const list = groups.get(key).sort((a,b)=>{
+      const da = a.fechaCerrado||a.fechaUltimoCambio, db = b.fechaCerrado||b.fechaUltimoCambio;
+      return db.localeCompare(da);
+    });
+    const groupKey = 'archivo-'+key;
+    const collapsed = collapsedGroups[groupKey];
+    const rowsHtml = list.map(it=>archiveRowHtml(it)).join('');
     return `
       <div class="group-block ${collapsed?'group-collapsed':''}">
         <div class="group-head" onclick="toggleGroup('${groupKey}')">

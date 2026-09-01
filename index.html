@@ -2231,18 +2231,20 @@ function isCriticalAlert(it){
   const atrasadoGeneral = daysSince(it.fechaRecibido) > 5;
   return vencido || atrasadoGeneral;
 }
-function puedePausar(it){ return phaseKeyOf(it.estado)==='encurso' || it.estado==='Cotizado' || it.estado==='Listo para entrega'; }
+function puedePausar(it){ return phaseKeyOf(it.estado)==='encurso' || it.estado==='Cotizado' || it.estado==='Listo para entrega' || it.estado==='Aprobado'; }
 function pausaLabel(it){
   if(it.estado==='Cotizado') return 'Esperando aprobacion';
   if(it.estado==='Listo para entrega') return 'Esperando recogida';
+  if(it.estado==='Aprobado') return 'Esperando inicio';
   return 'Pausado';
 }
 function pausaAccionLabel(it){
   if(it.estado==='Cotizado') return 'Marcar esperando aprobacion';
   if(it.estado==='Listo para entrega') return 'Marcar esperando recogida';
+  if(it.estado==='Aprobado') return 'Marcar esperando inicio';
   return 'Pausar';
 }
-function pausaIcon(it){ return (it.estado==='Cotizado' || it.estado==='Listo para entrega') ? '&#9203;' : '&#9208;'; }
+function pausaIcon(it){ return (it.estado==='Cotizado' || it.estado==='Listo para entrega' || it.estado==='Aprobado') ? '&#9203;' : '&#9208;'; }
 function pausarProyecto(id, ev){
   if(ev) ev.stopPropagation();
   const it = items.find(i=>i.id===id);

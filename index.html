@@ -510,6 +510,9 @@
       <div class="field"><label>Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
       <div class="field"><label>Fecha limite (opcional)</label><input type="date" id="f-limite" style="text-transform:none;"></div>
     </div>
+    <div class="grid2">
+      <div class="field"><label>Fecha de entrega (opcional)</label><input type="date" id="f-fecha-entrega" style="text-transform:none;"></div>
+    </div>
     <div class="oc-line">
       <input type="checkbox" id="f-tiene-oc" onchange="document.getElementById('f-numero-oc').disabled=!this.checked">
       <label style="margin:0;">Tiene orden de compra</label>
@@ -1989,6 +1992,7 @@ function printFicha(){
     <div class="print-row"><b>Prioridad</b><span>${it.prioridad || 'Sin prioridad'}</span></div>
     <div class="print-row"><b>Fecha de recepcion</b><span>${fmtDate(it.fechaRecibido)}</span></div>
     <div class="print-row"><b>Fecha limite</b><span>${it.fechaLimite ? fmtDate(it.fechaLimite) : '-'}</span></div>
+    <div class="print-row"><b>Fecha de entrega</b><span>${it.fechaCerrado ? fmtDate(it.fechaCerrado) : '-'}</span></div>
     <div class="print-row"><b>Notas</b><span>${it.notas||'-'}</span></div>
     <div class="print-row"><b>Adjuntos</b><span>${adjuntosLista}</span></div>
     <div style="margin-top:14px; font-weight:800; color:#3F2364;">Historial de cambios</div>
@@ -2033,6 +2037,7 @@ function openModal(prefillId){
     document.getElementById('f-monto').value = formatMontoPlain(it.monto);
     document.getElementById('f-fecha').value = it.fechaRecibido;
     document.getElementById('f-limite').value = it.fechaLimite||'';
+    document.getElementById('f-fecha-entrega').value = it.fechaCerrado||'';
     document.getElementById('f-tiene-oc').checked = it.tieneOC;
     document.getElementById('field-facturado-line').style.display = 'flex';
     document.getElementById('f-facturado').checked = !!it.facturado;
@@ -2069,6 +2074,7 @@ function openModal(prefillId){
     document.getElementById('f-canal').value = 'whatsapp';
     document.getElementById('f-prioridad').value = '';
     document.getElementById('f-fecha').value = todayStr();
+    document.getElementById('f-fecha-entrega').value = '';
     document.getElementById('f-tiene-oc').checked = false;
     document.getElementById('field-facturado-line').style.display = 'none';
     document.getElementById('f-facturado').checked = false;
@@ -2152,17 +2158,20 @@ function saveModal(){
       finalEstado = 'En proceso';
     }
     applyEstadoTransition(it, finalEstado);
+    const fechaEntregaManual = document.getElementById('f-fecha-entrega').value;
+    if(fechaEntregaManual) it.fechaCerrado = fechaEntregaManual;
   } else {
     const estadoInicial = origen==='cotizacion' ? 'Pendiente de cotizar' : 'Pendiente';
     const facturadoInicial = document.getElementById('f-facturado').checked;
     let pagoContadoInicial = document.getElementById('f-pago-contado').checked;
     let pendientePagoInicial = document.getElementById('f-pendiente-pago').checked;
     if(pagoContadoInicial && pendientePagoInicial){ pendientePagoInicial = false; }
+    const fechaEntregaInicial = document.getElementById('f-fecha-entrega').value || null;
     items.push(Object.assign({}, base, {
       id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
       estado: estadoInicial,
       fechaUltimoCambio: todayStr(),
-      fechaCotizado: null, fechaAprobado: null, fechaCerrado: null,
+      fechaCotizado: null, fechaAprobado: null, fechaCerrado: fechaEntregaInicial,
       facturado: facturadoInicial,
       pagoContado: pagoContadoInicial,
       pendientePago: pendientePagoInicial,

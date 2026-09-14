@@ -504,7 +504,8 @@
       </div>
     </div>
     <div class="field"><label>Cliente</label><input id="f-cliente" list="clientes-list" placeholder="Nombre del cliente o empresa"><datalist id="clientes-list"></datalist></div>
-    <div class="field"><label>Descripcion</label><textarea id="f-descripcion" placeholder="Que se solicita"></textarea></div>
+    <div class="field"><label>Nombre del proyecto</label><textarea id="f-descripcion" placeholder="Titulo corto, ej: Rotulacion de cristales"></textarea></div>
+    <div class="field"><label>Descripcion</label><textarea id="f-notas" placeholder="Detalles, medidas, especificaciones"></textarea></div>
     <div class="field"><label>Monto del proyecto ($)</label><input type="text" inputmode="decimal" id="f-monto" placeholder="0.00" oninput="maskMontoInput(this)" style="text-transform:none;"></div>
     <div class="grid2">
       <div class="field"><label>Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
@@ -559,7 +560,6 @@
       <button type="button" class="btn-ghost" style="width:100%;" onclick="openOrdenProduccion()">&#127981; Orden de Produccion</button>
     </div>
     <div class="field" id="field-archivar-btn" style="display:none;"></div>
-    <div class="field"><label>Notas</label><textarea id="f-notas" placeholder="Opcional"></textarea></div>
     <div class="modal-actions">
       <button class="btn-ghost" id="btn-delete" style="display:none; color:var(--magenta);" onclick="deleteFromModal()">Eliminar</button>
       <div class="modal-actions-right">

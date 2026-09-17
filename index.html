@@ -451,7 +451,7 @@
         <option value="counter">Counter</option>
         <option value="corporativa">Corporativa</option>
       </select>
-      <button class="btn-primary" id="btn-nuevo-proyecto" onclick="openModal()">+ Nuevo proyecto</button>
+      <button class="btn-primary" id="btn-nuevo-proyecto" onclick="handleNuevoProyectoClick()">+ Nuevo proyecto</button>
     </div>
     <div id="subtabs-holder"></div>
     <div id="content"></div>
@@ -670,6 +670,24 @@
     <p id="custom-alert-message" style="font-size:13.5px; color:var(--ink-2); line-height:1.5; margin:0 0 20px;"></p>
     <div class="modal-actions" style="justify-content:flex-end;">
       <button class="btn-primary" style="margin-left:0;" onclick="closeCustomAlert()">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-rezagados">
+  <div class="modal" style="max-width:460px; margin-top:10vh; border-top:5px solid var(--magenta);">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <span style="font-size:22px;">&#9203;</span>
+      <h2 style="margin:0;">Antes de crear algo nuevo...</h2>
+    </div>
+    <p style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:4px 0 14px;">Tienes proyectos sin moverse hace tiempo. Sacalos primero, o confirma que quieres seguir de todas formas.</p>
+    <div id="rezagados-list" style="max-height:280px; overflow-y:auto; margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeRezagadosDialog()">Cancelar</button>
+      <div class="modal-actions-right">
+        <button class="btn-ghost" onclick="verPendientesDesdeRezagados()">Ver pendientes</button>
+        <button class="btn-primary" style="margin-left:0;" onclick="crearDeTodasFormas()">Crear de todas formas</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1865,6 +1883,44 @@ function viewAdjunto(dataUrl, tipo){
   }
 }
 function closeLightbox(){ document.getElementById('overlay-lightbox').classList.remove('open'); }
+function proyectosRezagados(){
+  const UMBRAL_DIAS = 5;
+  return items.filter(it=>{
+    if(it.archivado || it.pausado) return false;
+    if(CERRADOS.includes(it.estado) || it.estado===ESTADO_RECHAZADO) return false;
+    const vencido = it.fechaLimite && todayStr() > it.fechaLimite;
+    const sinMoverse = daysSince(it.fechaUltimoCambio) >= UMBRAL_DIAS;
+    return vencido || sinMoverse;
+  }).sort((a,b)=>daysSince(b.fechaUltimoCambio)-daysSince(a.fechaUltimoCambio));
+}
+function handleNuevoProyectoClick(){
+  const rezagados = proyectosRezagados();
+  if(!rezagados.length){ openModal(); return; }
+  const listHtml = rezagados.map(it=>{
+    const dias = daysSince(it.fechaUltimoCambio);
+    const vencido = it.fechaLimite && todayStr() > it.fechaLimite;
+    return `
+      <div class="archive-row" style="cursor:pointer;" onclick="closeRezagadosDialog(); openModal('${it.id}');">
+        <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+        <b>${it.cliente}</b>
+        <span class="archive-desc">${it.descripcion||''}</span>
+        <span class="archive-date" style="color:${vencido?'var(--magenta)':'var(--ink-2)'}; font-weight:700;">${dias}d sin moverse${vencido?' &middot; Vencido':''}</span>
+      </div>`;
+  }).join('');
+  document.getElementById('rezagados-list').innerHTML = listHtml;
+  document.getElementById('overlay-rezagados').classList.add('open');
+}
+function closeRezagadosDialog(){
+  document.getElementById('overlay-rezagados').classList.remove('open');
+}
+function verPendientesDesdeRezagados(){
+  closeRezagadosDialog();
+  setView('panorama');
+}
+function crearDeTodasFormas(){
+  closeRezagadosDialog();
+  openModal();
+}
 function showAlert(msg){
   document.getElementById('custom-alert-message').textContent = msg;
   document.getElementById('overlay-custom-alert').classList.add('open');

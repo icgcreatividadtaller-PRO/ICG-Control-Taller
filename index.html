@@ -509,11 +509,12 @@
     <div class="field"><label>Descripcion</label><textarea id="f-notas" placeholder="Detalles, medidas, especificaciones"></textarea></div>
     <div class="field"><label>Monto del proyecto ($)</label><input type="text" inputmode="decimal" id="f-monto" placeholder="0.00" oninput="maskMontoInput(this)" style="text-transform:none;"></div>
     <div class="grid2">
+      <div id="field-fecha-recepcion-home" style="display:none;"></div>
       <div class="field" id="field-fecha-recepcion"><label>Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
-      <div class="field" id="field-limite-line"><label>Fecha limite (opcional)</label><input type="date" id="f-limite" style="text-transform:none;"></div>
+      <div class="field" id="field-limite-line"><label>Fecha limite</label><input type="date" id="f-limite" style="text-transform:none;"></div>
     </div>
     <div class="grid2" id="field-fecha-entrega-row">
-      <div class="field"><label>Fecha de entrega (opcional)</label><input type="date" id="f-fecha-entrega" style="text-transform:none;"></div>
+      <div class="field"><label>Fecha de Entrega</label><input type="date" id="f-fecha-entrega" style="text-transform:none;"></div>
     </div>
     <div class="oc-line" id="field-tiene-oc-line">
       <input type="checkbox" id="f-tiene-oc" onchange="document.getElementById('f-numero-oc').disabled=!this.checked">
@@ -526,12 +527,16 @@
       <span id="f-facturado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
     <div class="oc-line" id="field-pago-contado-line">
-      <input type="checkbox" id="f-pago-contado" onclick="if(this.checked){ document.getElementById('f-pendiente-pago').checked=false; }">
+      <input type="checkbox" id="f-pago-contado" onclick="if(this.checked){ document.getElementById('f-pendiente-pago').checked=false; } toggleFechaPagoVisible();">
       <label style="margin:0;">Pagado</label>
       <span id="f-pago-contado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
+    <div class="field" id="field-fecha-pago-line" style="display:none; margin-top:-6px;">
+      <label>Fecha de pago (opcional)</label>
+      <input type="date" id="f-fecha-pago" style="text-transform:none;">
+    </div>
     <div class="oc-line" id="field-pendiente-pago-line">
-      <input type="checkbox" id="f-pendiente-pago" onclick="if(this.checked){ document.getElementById('f-pago-contado').checked=false; }">
+      <input type="checkbox" id="f-pendiente-pago" onclick="if(this.checked){ document.getElementById('f-pago-contado').checked=false; toggleFechaPagoVisible(); }">
       <label style="margin:0;">Entregado / Pendiente de Pago</label>
       <span id="f-pendiente-pago-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
@@ -2083,6 +2088,7 @@ function printFicha(){
     <div class="print-row"><b>Fecha de recepcion</b><span>${fmtDate(it.fechaRecibido)}</span></div>
     <div class="print-row"><b>Fecha limite</b><span>${it.fechaLimite ? fmtDate(it.fechaLimite) : '-'}</span></div>
     <div class="print-row"><b>Fecha de entrega</b><span>${it.fechaCerrado ? fmtDate(it.fechaCerrado) : '-'}</span></div>
+    <div class="print-row"><b>Fecha de pago</b><span>${it.fechaPagoContado ? fmtDate(it.fechaPagoContado) : '-'}</span></div>
     <div class="print-row"><b>Notas</b><span>${it.notas||'-'}</span></div>
     <div class="print-row"><b>Adjuntos</b><span>${adjuntosLista}</span></div>
     <div style="margin-top:14px; font-weight:800; color:#3F2364;">Historial de cambios</div>
@@ -2107,11 +2113,14 @@ function refreshClientesList(){
   document.getElementById('clientes-list').innerHTML = allClientes().map(c=>`<option value="${c}">`).join('');
 }
 
+function toggleFechaPagoVisible(){
+  document.getElementById('field-fecha-pago-line').style.display = document.getElementById('f-pago-contado').checked ? '' : 'none';
+}
 function restaurarLayoutFechasNormal(){
   const fechaRecepcionDiv = document.getElementById('field-fecha-recepcion');
-  const limiteDiv = document.getElementById('field-limite-line');
-  if(fechaRecepcionDiv.nextSibling !== limiteDiv){
-    limiteDiv.parentElement.insertBefore(fechaRecepcionDiv, limiteDiv);
+  const home = document.getElementById('field-fecha-recepcion-home');
+  if(fechaRecepcionDiv.previousSibling !== home){
+    home.after(fechaRecepcionDiv);
   }
 }
 function openModal(prefillId){
@@ -2143,6 +2152,8 @@ function openModal(prefillId){
     document.getElementById('f-facturado-fecha').textContent = it.fechaFacturado ? ('Desde '+fmtDate(it.fechaFacturado)) : '';
     document.getElementById('f-pago-contado').checked = !!it.pagoContado;
     document.getElementById('f-pago-contado-fecha').textContent = it.fechaPagoContado ? ('Desde '+fmtDate(it.fechaPagoContado)) : '';
+    document.getElementById('f-fecha-pago').value = it.fechaPagoContado||'';
+    toggleFechaPagoVisible();
     document.getElementById('f-pendiente-pago').checked = !!it.pendientePago;
     document.getElementById('f-pendiente-pago-fecha').textContent = it.fechaPendientePago ? ('Desde '+fmtDate(it.fechaPendientePago)) : '';
     document.getElementById('f-numero-oc').value = it.numeroOC||'';
@@ -2173,10 +2184,11 @@ function openModal(prefillId){
     } else {
       restaurarLayoutFechasNormal();
     }
-    document.getElementById('field-limite-line').style.display = esCotizacion ? 'none' : '';
     document.getElementById('field-fecha-entrega-row').style.display = esCotizacion ? 'none' : '';
+    document.getElementById('field-limite-line').style.display = esCotizacion ? 'none' : '';
     document.getElementById('field-tiene-oc-line').style.display = esCotizacion ? 'none' : '';
     document.getElementById('field-pago-contado-line').style.display = esCotizacion ? 'none' : '';
+    document.getElementById('field-fecha-pago-line').style.display = 'none';
     document.getElementById('field-pendiente-pago-line').style.display = esCotizacion ? 'none' : '';
     ['f-cliente','f-descripcion','f-limite','f-numero-oc','f-notas','f-monto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-origen').value = 'cotizacion';
@@ -2192,6 +2204,8 @@ function openModal(prefillId){
     document.getElementById('f-facturado-fecha').textContent = '';
     document.getElementById('f-pago-contado').checked = false;
     document.getElementById('f-pago-contado-fecha').textContent = '';
+    document.getElementById('f-fecha-pago').value = '';
+    document.getElementById('field-fecha-pago-line').style.display = 'none';
     document.getElementById('f-pendiente-pago').checked = false;
     document.getElementById('f-pendiente-pago-fecha').textContent = '';
     document.getElementById('f-numero-oc').disabled = true;
@@ -2252,7 +2266,9 @@ function saveModal(){
     if(!facturadoNuevo){ it.fechaFacturado = null; }
     it.facturado = facturadoNuevo;
 
-    if(pagoContadoNuevo && !it.pagoContado){ it.fechaPagoContado = todayStr(); }
+    const fechaPagoManual = document.getElementById('f-fecha-pago').value;
+    if(pagoContadoNuevo && !it.pagoContado){ it.fechaPagoContado = fechaPagoManual || todayStr(); }
+    else if(pagoContadoNuevo && it.pagoContado && fechaPagoManual){ it.fechaPagoContado = fechaPagoManual; }
     if(!pagoContadoNuevo){ it.fechaPagoContado = null; }
     it.pagoContado = pagoContadoNuevo;
 
@@ -2278,6 +2294,7 @@ function saveModal(){
     let pendientePagoInicial = document.getElementById('f-pendiente-pago').checked;
     if(pagoContadoInicial && pendientePagoInicial){ pendientePagoInicial = false; }
     const fechaEntregaInicial = document.getElementById('f-fecha-entrega').value || null;
+    const fechaPagoInicial = document.getElementById('f-fecha-pago').value || null;
     items.push(Object.assign({}, base, {
       id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
       estado: estadoInicial,
@@ -2288,7 +2305,7 @@ function saveModal(){
       pendientePago: pendientePagoInicial,
       archivado: false,
       fechaFacturado: facturadoInicial ? todayStr() : null,
-      fechaPagoContado: pagoContadoInicial ? todayStr() : null,
+      fechaPagoContado: pagoContadoInicial ? (fechaPagoInicial || todayStr()) : null,
       fechaPendientePago: pendientePagoInicial ? todayStr() : null,
       historial: [{estado: estadoInicial, ts: new Date().toISOString()}]
     }));

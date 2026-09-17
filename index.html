@@ -678,9 +678,9 @@
   <div class="modal" style="max-width:460px; margin-top:10vh; border-top:5px solid var(--magenta);">
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
       <span style="font-size:22px;">&#9203;</span>
-      <h2 style="margin:0;">Antes de crear algo nuevo...</h2>
+      <h2 id="rezagados-titulo" style="margin:0;">Antes de crear algo nuevo...</h2>
     </div>
-    <p style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:4px 0 14px;">Tienes proyectos sin moverse hace tiempo. Sacalos primero, o confirma que quieres seguir de todas formas.</p>
+    <p id="rezagados-subtitulo" style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:4px 0 14px;">Tienes proyectos sin moverse hace tiempo. Sacalos primero, o confirma que quieres seguir de todas formas.</p>
     <div id="rezagados-list" style="max-height:280px; overflow-y:auto; margin-bottom:16px;"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeRezagadosDialog()">Cancelar</button>
@@ -755,6 +755,7 @@ let dragId = null;
 let collapsedGroups = {};
 let weekOffset = 0;
 let resumenDrilldownTipo = null;
+let resumenDiarioDrilldownTipo = null;
 let listadoSort = {field:'fecha', dir:1};
 
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,''); }
@@ -1894,8 +1895,15 @@ function proyectosRezagados(){
   }).sort((a,b)=>daysSince(b.fechaUltimoCambio)-daysSince(a.fechaUltimoCambio));
 }
 function handleNuevoProyectoClick(){
-  const rezagados = proyectosRezagados();
+  const esCotizacion = view==='cotizaciones';
+  const rezagados = proyectosRezagados().filter(it=>
+    esCotizacion ? ESTADOS_COTIZACION.includes(it.estado) : !ESTADOS_COTIZACION.includes(it.estado)
+  );
   if(!rezagados.length){ openModal(); return; }
+  document.getElementById('rezagados-titulo').textContent = esCotizacion ? 'Antes de cotizar algo nuevo...' : 'Antes de crear algo nuevo...';
+  document.getElementById('rezagados-subtitulo').textContent = esCotizacion
+    ? 'Tienes cotizaciones sin moverse hace tiempo. Sacalas primero, o confirma que quieres seguir de todas formas.'
+    : 'Tienes proyectos sin moverse hace tiempo. Sacalos primero, o confirma que quieres seguir de todas formas.';
   const listHtml = rezagados.map(it=>{
     const dias = daysSince(it.fechaUltimoCambio);
     const vencido = it.fechaLimite && todayStr() > it.fechaLimite;
@@ -2773,16 +2781,25 @@ function isTodayLocal(ts){
   return toDs(new Date(ts)) === todayStr();
 }
 function openResumenDiario(){
+  resumenDiarioDrilldownTipo = null;
   document.getElementById('overlay-resumen-diario').classList.add('open');
+  renderResumenDiario();
+}
+function toggleResumenDiarioDrilldown(tipo){
+  resumenDiarioDrilldownTipo = (resumenDiarioDrilldownTipo === tipo) ? null : tipo;
   renderResumenDiario();
 }
 function closeResumenDiario(){ document.getElementById('overlay-resumen-diario').classList.remove('open'); }
 function renderResumenDiario(){
   const hoy = todayStr();
-  const registrados = items.filter(it=>it.fechaRecibido===hoy).length;
-  const cotizados = items.filter(it=>it.fechaCotizado===hoy).length;
-  const aprobados = items.filter(it=>it.fechaAprobado===hoy).length;
-  const entregados = items.filter(it=>it.fechaCerrado===hoy).length;
+  const registradosList = items.filter(it=>it.fechaRecibido===hoy);
+  const cotizadosList = items.filter(it=>it.fechaCotizado===hoy);
+  const aprobadosList = items.filter(it=>it.fechaAprobado===hoy);
+  const entregadosList = items.filter(it=>it.fechaCerrado===hoy);
+  const registrados = registradosList.length;
+  const cotizados = cotizadosList.length;
+  const aprobados = aprobadosList.length;
+  const entregados = entregadosList.length;
   const facturadosHoy = items.filter(it=>it.fechaFacturado===hoy || it.fechaPagoContado===hoy);
   const facturadoHoy = facturadosHoy.reduce((s,it)=>s+(Number(it.monto)||0),0);
   const facturadoCounter = facturadosHoy.filter(it=>it.tipoCliente==='counter').reduce((s,it)=>s+(Number(it.monto)||0),0);
@@ -2796,14 +2813,33 @@ function renderResumenDiario(){
   });
   eventos.sort((a,b)=> new Date(b.ts) - new Date(a.ts));
 
+  const listasDiario = {registrados:registradosList, cotizados:cotizadosList, aprobados:aprobadosList, entregados:entregadosList, facturado:facturadosHoy};
+  let drilldownDiarioHtml = '';
+  if(resumenDiarioDrilldownTipo && listasDiario[resumenDiarioDrilldownTipo]){
+    const lista = listasDiario[resumenDiarioDrilldownTipo];
+    const nombres = {registrados:'Registrados hoy', cotizados:'Cotizados hoy', aprobados:'Aprobados hoy', entregados:'Entregados hoy', facturado:'Facturados hoy'};
+    drilldownDiarioHtml = `
+      <div style="margin-top:14px; border-top:1.5px dashed var(--border-strong); padding-top:12px;">
+        <div style="font-weight:800; color:var(--purple); font-size:12.5px; margin-bottom:8px;">${nombres[resumenDiarioDrilldownTipo]} (${lista.length})</div>
+        ${lista.length ? lista.map(it=>`
+          <div class="archive-row" style="cursor:pointer;" onclick="closeResumenDiario(); openModal('${it.id}')">
+            <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+            <b>${it.cliente}</b>
+            <span class="archive-desc">${it.descripcion||''}</span>
+            ${it.monto ? `<span class="money-tag">${formatMoney(it.monto)}</span>` : ''}
+          </div>`).join('') : '<div class="op-card-empty">Nada aqui todavia hoy.</div>'}
+      </div>`;
+  }
+
   document.getElementById('resumen-diario-body').innerHTML = `
     <div class="resumen-stats" style="grid-template-columns:repeat(5,1fr);">
-      <div class="resumen-stat"><span class="num">${registrados}</span><span class="lbl">Registrados</span></div>
-      <div class="resumen-stat"><span class="num">${cotizados}</span><span class="lbl">Cotizados</span></div>
-      <div class="resumen-stat"><span class="num">${aprobados}</span><span class="lbl">Aprobados</span></div>
-      <div class="resumen-stat"><span class="num">${entregados}</span><span class="lbl">Entregados</span></div>
-      <div class="resumen-stat"><span class="num" style="font-size:20px;">${formatMoney(facturadoHoy)}</span><span class="lbl">Facturado</span></div>
+      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='registrados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('registrados')"><span class="num">${registrados}</span><span class="lbl">Registrados</span></div>
+      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotizados</span></div>
+      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='aprobados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('aprobados')"><span class="num">${aprobados}</span><span class="lbl">Aprobados</span></div>
+      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='entregados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('entregados')"><span class="num">${entregados}</span><span class="lbl">Entregados</span></div>
+      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='facturado'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('facturado')"><span class="num" style="font-size:20px;">${formatMoney(facturadoHoy)}</span><span class="lbl">Facturado</span></div>
     </div>
+    ${drilldownDiarioHtml}
     <div class="resumen-stats" style="grid-template-columns:1fr 1fr; margin-top:10px;">
       <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCounter)}</span><span class="lbl">Counter</span></div>
       <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativa)}</span><span class="lbl">Corporativa</span></div>

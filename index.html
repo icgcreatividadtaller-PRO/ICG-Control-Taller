@@ -451,7 +451,7 @@
         <option value="counter">Counter</option>
         <option value="corporativa">Corporativa</option>
       </select>
-      <button class="btn-primary" onclick="openModal()">+ Nuevo proyecto</button>
+      <button class="btn-primary" id="btn-nuevo-proyecto" onclick="openModal()">+ Nuevo proyecto</button>
     </div>
     <div id="subtabs-holder"></div>
     <div id="content"></div>
@@ -471,7 +471,7 @@
       </div>
     </div>
     <div class="grid2">
-      <div class="field">
+      <div class="field" id="field-origen-line">
         <label>Origen</label>
         <select id="f-origen" onchange="handleOrigenChange()">
           <option value="cotizacion">Pide cotizacion</option>
@@ -2027,6 +2027,7 @@ function openModal(prefillId){
   if(editingId){
     const it = items.find(i=>i.id===editingId);
     document.getElementById('modal-title').textContent = 'Editar proyecto';
+    document.getElementById('field-origen-line').style.display = '';
     document.getElementById('f-origen').value = it.origen;
     document.getElementById('f-tipo-counter').checked = it.tipoCliente==='counter';
     document.getElementById('f-tipo-corporativa').checked = it.tipoCliente==='corporativa';
@@ -2066,7 +2067,9 @@ function openModal(prefillId){
     renderAdjuntosList();
     renderFotoFinal();
   } else {
-    document.getElementById('modal-title').textContent = 'Nuevo proyecto';
+    const esCotizacion = view==='cotizaciones';
+    document.getElementById('modal-title').textContent = esCotizacion ? 'Nueva cotizacion' : 'Nuevo proyecto';
+    document.getElementById('field-origen-line').style.display = esCotizacion ? 'none' : '';
     ['f-cliente','f-descripcion','f-limite','f-numero-oc','f-notas','f-monto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-origen').value = 'cotizacion';
     document.getElementById('f-tipo-counter').checked = false;
@@ -2817,6 +2820,7 @@ function renderResumen(){
 }
 
 function render(){
+  document.getElementById('btn-nuevo-proyecto').textContent = view==='cotizaciones' ? '+ Nueva cotizacion' : '+ Nuevo proyecto';
   refreshCategoriaFilter();
   const q = document.getElementById('search').value;
   const filtOrigen = document.getElementById('filter-origen').value;

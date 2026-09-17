@@ -469,6 +469,7 @@
         <input type="checkbox" id="f-tipo-corporativa" onchange="handleTipoClienteChange('corporativa')">
         <label style="margin:0;">Corporativa</label>
       </div>
+      <div id="field-fecha-recepcion-slot" style="margin-top:10px;"></div>
     </div>
     <div class="grid2">
       <div class="field" id="field-origen-line">
@@ -508,13 +509,13 @@
     <div class="field"><label>Descripcion</label><textarea id="f-notas" placeholder="Detalles, medidas, especificaciones"></textarea></div>
     <div class="field"><label>Monto del proyecto ($)</label><input type="text" inputmode="decimal" id="f-monto" placeholder="0.00" oninput="maskMontoInput(this)" style="text-transform:none;"></div>
     <div class="grid2">
-      <div class="field"><label>Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
-      <div class="field"><label>Fecha limite (opcional)</label><input type="date" id="f-limite" style="text-transform:none;"></div>
+      <div class="field" id="field-fecha-recepcion"><label>Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
+      <div class="field" id="field-limite-line"><label>Fecha limite (opcional)</label><input type="date" id="f-limite" style="text-transform:none;"></div>
     </div>
-    <div class="grid2">
+    <div class="grid2" id="field-fecha-entrega-row">
       <div class="field"><label>Fecha de entrega (opcional)</label><input type="date" id="f-fecha-entrega" style="text-transform:none;"></div>
     </div>
-    <div class="oc-line">
+    <div class="oc-line" id="field-tiene-oc-line">
       <input type="checkbox" id="f-tiene-oc" onchange="document.getElementById('f-numero-oc').disabled=!this.checked">
       <label style="margin:0;">Tiene orden de compra</label>
       <input id="f-numero-oc" placeholder="Numero de OC" style="max-width:170px;" disabled>
@@ -656,6 +657,19 @@
     <div class="modal-actions" style="margin-top:16px;">
       <div></div>
       <button class="btn-ghost" onclick="closeAdjuntosView()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-custom-alert" onclick="if(event.target===this) closeCustomAlert()">
+  <div class="modal" style="max-width:380px; margin-top:12vh;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+      <span style="font-size:22px;">&#9888;</span>
+      <h2 style="margin:0;">Aviso</h2>
+    </div>
+    <p id="custom-alert-message" style="font-size:13.5px; color:var(--ink-2); line-height:1.5; margin:0 0 20px;"></p>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn-primary" style="margin-left:0;" onclick="closeCustomAlert()">Aceptar</button>
     </div>
   </div>
 </div>
@@ -1110,7 +1124,7 @@ function editarMetas(){
   const min = parseFloat(nuevoMin.replace(/,/g,''));
   const max = parseFloat(nuevoMax.replace(/,/g,''));
   if(isNaN(min) || isNaN(max) || min<=0 || max<min){
-    alert('Los valores no son validos. La meta minima debe ser mayor a 0 y la maxima mayor o igual a la minima.');
+    showAlert('Los valores no son validos. La meta minima debe ser mayor a 0 y la maxima mayor o igual a la minima.');
     return;
   }
   META_MIN = min; META_MAX = max;
@@ -1300,9 +1314,9 @@ function handleImportFile(ev){
       saveMaterialesExtra();
       saveMetas();
       render();
-      alert('Respaldo restaurado correctamente.');
+      showAlert('Respaldo restaurado correctamente.');
     }catch(e){
-      alert('Ese archivo no parece ser un respaldo valido de este panel.');
+      showAlert('Ese archivo no parece ser un respaldo valido de este panel.');
     }
   };
   reader.readAsText(file);
@@ -1342,7 +1356,7 @@ function handleOrigenChange(){
   estSel.innerHTML = opciones.map(e=>`<option value="${e}" ${e===estadoActual && sigueSiendoValido ? 'selected' : ''}>${e}</option>`).join('');
   if(!sigueSiendoValido){
     estSel.value = 'En proceso';
-    alert('El Estado no aplica con este nuevo Origen, asi que se ajusto automaticamente a "En proceso" para que el proyecto no quede atascado.');
+    showAlert('El Estado no aplica con este nuevo Origen, asi que se ajusto automaticamente a "En proceso" para que el proyecto no quede atascado.');
   }
 }
 function nextEstadoFor(it){
@@ -1851,6 +1865,18 @@ function viewAdjunto(dataUrl, tipo){
   }
 }
 function closeLightbox(){ document.getElementById('overlay-lightbox').classList.remove('open'); }
+function showAlert(msg){
+  document.getElementById('custom-alert-message').textContent = msg;
+  document.getElementById('overlay-custom-alert').classList.add('open');
+}
+function closeCustomAlert(){
+  document.getElementById('overlay-custom-alert').classList.remove('open');
+}
+document.addEventListener('keydown', e=>{
+  if((e.key==='Enter' || e.key==='Escape') && document.getElementById('overlay-custom-alert').classList.contains('open')){
+    closeCustomAlert();
+  }
+});
 
 function viewAdjuntoFromItem(itemId, adjId){
   const it = items.find(i=>i.id===itemId);
@@ -1903,7 +1929,7 @@ function handleAddAdjunto(ev){
   ev.target.value = '';
   if(!file || !editingId) return;
   if(file.size > MAX_ADJUNTO_BYTES){
-    alert('Ese archivo pesa mas de 4MB. Comprime la imagen o el archivo antes de adjuntarlo, para no llenar el espacio de guardado.');
+    showAlert('Ese archivo pesa mas de 4MB. Comprime la imagen o el archivo antes de adjuntarlo, para no llenar el espacio de guardado.');
     return;
   }
   const reader = new FileReader();
@@ -1948,7 +1974,7 @@ function handleFotoFinal(ev){
   ev.target.value = '';
   if(!file || !editingId) return;
   if(file.size > MAX_ADJUNTO_BYTES){
-    alert('Esa imagen pesa mas de 4MB. Comprimela antes de subirla.');
+    showAlert('Esa imagen pesa mas de 4MB. Comprimela antes de subirla.');
     return;
   }
   const reader = new FileReader();
@@ -2017,6 +2043,13 @@ function refreshClientesList(){
   document.getElementById('clientes-list').innerHTML = allClientes().map(c=>`<option value="${c}">`).join('');
 }
 
+function restaurarLayoutFechasNormal(){
+  const fechaRecepcionDiv = document.getElementById('field-fecha-recepcion');
+  const limiteDiv = document.getElementById('field-limite-line');
+  if(fechaRecepcionDiv.nextSibling !== limiteDiv){
+    limiteDiv.parentElement.insertBefore(fechaRecepcionDiv, limiteDiv);
+  }
+}
 function openModal(prefillId){
   editingId = prefillId || null;
   refreshClientesList();
@@ -2028,6 +2061,7 @@ function openModal(prefillId){
     const it = items.find(i=>i.id===editingId);
     document.getElementById('modal-title').textContent = 'Editar proyecto';
     document.getElementById('field-origen-line').style.display = '';
+    restaurarLayoutFechasNormal();
     document.getElementById('f-origen').value = it.origen;
     document.getElementById('f-tipo-counter').checked = it.tipoCliente==='counter';
     document.getElementById('f-tipo-corporativa').checked = it.tipoCliente==='corporativa';
@@ -2070,6 +2104,16 @@ function openModal(prefillId){
     const esCotizacion = view==='cotizaciones';
     document.getElementById('modal-title').textContent = esCotizacion ? 'Nueva cotizacion' : 'Nuevo proyecto';
     document.getElementById('field-origen-line').style.display = esCotizacion ? 'none' : '';
+    if(esCotizacion){
+      document.getElementById('field-fecha-recepcion-slot').appendChild(document.getElementById('field-fecha-recepcion'));
+    } else {
+      restaurarLayoutFechasNormal();
+    }
+    document.getElementById('field-limite-line').style.display = esCotizacion ? 'none' : '';
+    document.getElementById('field-fecha-entrega-row').style.display = esCotizacion ? 'none' : '';
+    document.getElementById('field-tiene-oc-line').style.display = esCotizacion ? 'none' : '';
+    document.getElementById('field-pago-contado-line').style.display = esCotizacion ? 'none' : '';
+    document.getElementById('field-pendiente-pago-line').style.display = esCotizacion ? 'none' : '';
     ['f-cliente','f-descripcion','f-limite','f-numero-oc','f-notas','f-monto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-origen').value = 'cotizacion';
     document.getElementById('f-tipo-counter').checked = false;
@@ -2107,9 +2151,9 @@ function resolvedCategoria(){
 
 function saveModal(){
   const cliente = document.getElementById('f-cliente').value.trim().toUpperCase();
-  if(!cliente){ alert('Escribe el nombre del cliente.'); return; }
+  if(!cliente){ showAlert('Escribe el nombre del cliente.'); return; }
   const tipoClienteVal = resolvedTipoCliente();
-  if(!editingId && !tipoClienteVal){ alert('Selecciona el Tipo de Cliente: Counter o Corporativa.'); return; }
+  if(!editingId && !tipoClienteVal){ showAlert('Selecciona el Tipo de Cliente: Counter o Corporativa.'); return; }
   const origen = document.getElementById('f-origen').value;
   const montoVal = document.getElementById('f-monto').value;
   const base = {

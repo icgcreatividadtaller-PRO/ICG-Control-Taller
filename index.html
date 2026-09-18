@@ -403,11 +403,11 @@
     <div class="brand">ICG Control Taller</div>
     <div class="brand-sub">Control de produccion</div>
     <div class="nav-item" data-view="cotizaciones" onclick="setView('cotizaciones')"><span>Cotizaciones</span><span class="nav-count" id="count-cotizaciones">0</span></div>
-    <div class="nav-item active" data-view="tablero" onclick="setView('tablero')"><span>Tablero</span><span class="nav-count" id="count-activos">0</span></div>
+    <div class="nav-item" data-view="tablero" onclick="setView('tablero')"><span>Tablero</span><span class="nav-count" id="count-activos">0</span></div>
     <div class="nav-item" data-view="tabla" onclick="setView('tabla')"><span>Tabla</span></div>
     <div class="nav-item" data-view="calendario" onclick="setView('calendario')"><span>Calendario</span></div>
     <div class="nav-item" data-view="archivo" onclick="setView('archivo')"><span>Archivo</span><span class="nav-count" id="count-archivo">0</span></div>
-    <div class="nav-item" data-view="ordenes" onclick="setView('ordenes')"><span>Ordenes de Produccion</span><span class="nav-count" id="count-ordenes">0</span></div>
+    <div class="nav-item active" data-view="ordenes" onclick="setView('ordenes')"><span>Ordenes de Produccion</span><span class="nav-count" id="count-ordenes">0</span></div>
     <div class="nav-item" data-view="panorama" onclick="setView('panorama')"><span>Panorama</span><span class="nav-count" id="count-panorama">0</span></div>
     <div class="nav-item" data-view="listado" onclick="setView('listado')"><span>Listado</span><span class="nav-count" id="count-listado">0</span></div>
     <div class="auto-box">
@@ -433,7 +433,7 @@
     <div id="storage-banner" class="storage-banner"></div>
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Abrir menu">&#9776;</button>
-      <h1 id="page-title">Tablero</h1>
+      <h1 id="page-title">Ordenes de Produccion</h1>
     </div>
     <div class="grad-underline"><span></span><span></span></div>
     <div class="topbar" style="margin-bottom:18px;">
@@ -699,6 +699,21 @@
 
 <div id="print-area"></div>
 
+<div class="overlay" id="overlay-op-reminder">
+  <div class="modal" style="max-width:460px; margin-top:10vh; border-top:5px solid var(--yellow);">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <span style="font-size:22px;">&#127981;</span>
+      <h2 style="margin:0;">Revisa Ordenes de Produccion</h2>
+    </div>
+    <p style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:4px 0 14px;">Estos proyectos Corporativos ya estan en produccion pero no tienen Orden de Produccion creada ni marcada N/A.</p>
+    <div id="op-reminder-list" style="max-height:280px; overflow-y:auto; margin-bottom:16px;"></div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn-ghost" onclick="closeOpReminder()">Cerrar</button>
+      <button class="btn-primary" style="margin-left:0;" onclick="irAOrdenesDesdeReminder()">Revisar Ordenes de Produccion</button>
+    </div>
+  </div>
+</div>
+
 <div class="autosave-badge"><span class="gear">&#9881;</span> Autoguardado</div>
 
 <script>
@@ -751,7 +766,7 @@ let META_MAX = 99000;
 
 let items = [];
 let loadGeneration = 0;
-let view = 'tablero';
+let view = 'ordenes';
 let tableSubView = 'todos';
 let editingId = null;
 let sortState = {field:'orden', dir:1};
@@ -1127,6 +1142,7 @@ async function loadItems(){
   }
   showApp();
   render();
+  checkOpReminderDiario();
 }
 async function saveMetas(){
   try{ await storageSet('taller-metas', JSON.stringify({min:META_MIN, max:META_MAX})); }
@@ -1637,6 +1653,37 @@ function opProgress(op){
 function opTieneContenido(op){
   return !!(op && ((Array.isArray(op.procesos)&&op.procesos.length) || (Array.isArray(op.materiales)&&op.materiales.length) || op.tamano || op.notas || op.cantidad));
 }
+function corporativosSinOP(){
+  return items.filter(it=>
+    !it.archivado &&
+    it.tipoCliente==='corporativa' &&
+    opDisponible(it) &&
+    !it.opNoAplica &&
+    !opTieneContenido(it.ordenProduccion)
+  );
+}
+function checkOpReminderDiario(){
+  const hoy = todayStr();
+  if(localStorage.getItem('icg_op_reminder_visto') === hoy) return;
+  const pendientes = corporativosSinOP();
+  if(!pendientes.length) return;
+  const listHtml = pendientes.map(it=>`
+      <div class="archive-row" style="cursor:pointer;" onclick="closeOpReminder(); openModal('${it.id}');">
+        <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+        <b>${it.cliente}</b>
+        <span class="archive-desc">${it.descripcion||''}</span>
+      </div>`).join('');
+  document.getElementById('op-reminder-list').innerHTML = listHtml;
+  document.getElementById('overlay-op-reminder').classList.add('open');
+  localStorage.setItem('icg_op_reminder_visto', hoy);
+}
+function closeOpReminder(){
+  document.getElementById('overlay-op-reminder').classList.remove('open');
+}
+function irAOrdenesDesdeReminder(){
+  closeOpReminder();
+  setView('ordenes');
+}
 function opCardHtml(it){
   const op = it.ordenProduccion;
   const tieneOP = opTieneContenido(op);
@@ -1816,6 +1863,7 @@ function imprimirListado(){
 function renderPanorama(activos){
   const atascados = activos.filter(it=>getAlert(it)==='atencion');
   const atrasados = activos.filter(isCriticalAlert);
+  const corpSinOP = activos.filter(it=>it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion));
   const todosPausados = activos.filter(it=>it.pausado);
   const faltaFacturar = activos.filter(it=>it.estado==='Entregado' && !it.facturado);
   const pendientesCotizar = activos.filter(it=>it.estado==='Pendiente de cotizar');
@@ -1826,6 +1874,7 @@ function renderPanorama(activos){
   return [
     panoramaGroup('panorama-atascados', 'Atascados', sortByDias(atascados), it=>daysSince(it.fechaUltimoCambio)+'d sin mover'),
     panoramaGroup('panorama-atrasados', 'Atrasados', sortByDias(atrasados), it=>daysSince(it.fechaRecibido)+'d totales'),
+    panoramaGroup('panorama-corp-sin-op', 'Corporativos sin OP', sortByDias(corpSinOP), it=>it.estado),
     panoramaGroup('panorama-facturar', 'Falta Facturar', sortByDias(faltaFacturar), it=>it.monto?formatMoney(it.monto):'-'),
     panoramaGroup('panorama-pausados', 'Pausados', sortByDias(todosPausados), it=>`[${pausaLabel(it)}] Desde ${fmtDate(it.fechaPausado)}`),
     panoramaGroup('panorama-pend-cotizar', 'Pendientes de Cotizar', sortByDias(pendientesCotizar), it=>daysSince(it.fechaRecibido)+'d en fila'),
@@ -2993,6 +3042,7 @@ function render(){
     if(getAlert(it)==='atencion') panoramaIds.add(it.id);
     if(isCriticalAlert(it)) panoramaIds.add(it.id);
     if(it.pausado) panoramaIds.add(it.id);
+    if(it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion)) panoramaIds.add(it.id);
     if(it.estado==='Entregado' && !it.facturado) panoramaIds.add(it.id);
     if(it.estado==='Pendiente de cotizar') panoramaIds.add(it.id);
     if(it.pendientePago) panoramaIds.add(it.id);

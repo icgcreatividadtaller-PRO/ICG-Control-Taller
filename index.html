@@ -679,6 +679,20 @@
   </div>
 </div>
 
+<div class="overlay" id="overlay-custom-confirm" onclick="if(event.target===this) resolveCustomConfirm(false)">
+  <div class="modal" style="max-width:400px; margin-top:12vh;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+      <span style="font-size:22px;">&#10067;</span>
+      <h2 style="margin:0;">Confirmar</h2>
+    </div>
+    <p id="custom-confirm-message" style="font-size:13.5px; color:var(--ink-2); line-height:1.5; margin:0 0 20px;"></p>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn-ghost" onclick="resolveCustomConfirm(false)">Cancelar</button>
+      <button class="btn-primary" style="margin-left:0;" onclick="resolveCustomConfirm(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay-rezagados">
   <div class="modal" style="max-width:460px; margin-top:10vh; border-top:5px solid var(--magenta);">
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
@@ -1327,7 +1341,7 @@ function handleImportFile(ev){
   const file = ev.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try{
       const parsed = JSON.parse(reader.result);
       let nuevosItems, nuevasCategorias, nuevasMetas, nuevosProcesos, nuevosMateriales;
@@ -1342,7 +1356,7 @@ function handleImportFile(ev){
       } else {
         throw new Error('formato invalido');
       }
-      if(!confirm(`Este respaldo tiene ${nuevosItems.length} proyectos. Esto reemplazara todo lo que hay ahora en el panel (incluyendo categorias, procesos, materiales y meta semanal). Continuar?`)) return;
+      if(!(await showConfirm(`Este respaldo tiene ${nuevosItems.length} proyectos. Esto reemplazara todo lo que hay ahora en el panel (incluyendo categorias, procesos, materiales y meta semanal). Continuar?`))) return;
       items = nuevosItems;
       categoriasExtra = nuevasCategorias;
       procesosExtra = nuevosProcesos;
@@ -1406,11 +1420,11 @@ function nextEstadoFor(it){
   if(idx===-1 || idx===opts.length-1) return null;
   return opts[idx+1];
 }
-function rechazarProyecto(id, ev){
+async function rechazarProyecto(id, ev){
   ev.stopPropagation();
   const it = items.find(i=>i.id===id);
   if(!it) return;
-  if(!confirm('Marcar este proyecto como No aprobado?')) return;
+  if(!(await showConfirm('Marcar este proyecto como No aprobado?'))) return;
   applyEstadoTransition(it, ESTADO_RECHAZADO);
   saveItems(); render();
 }
@@ -1609,10 +1623,10 @@ function archivarOP(){
   closeOrdenProduccion();
   render();
 }
-function confirmarOrdenCompletadaModal(){
+async function confirmarOrdenCompletadaModal(){
   const it = items.find(i=>i.id===opItemId);
   if(!it || !it.ordenProduccion) return;
-  if(!confirm(`Vas a marcar la OP de "${it.cliente}" como Completada. Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`)) return;
+  if(!(await showConfirm(`Vas a marcar la OP de "${it.cliente}" como Completada. Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`))) return;
   archivarOP();
 }
 function desarchivarOP(){
@@ -1990,9 +2004,23 @@ function showAlert(msg){
 function closeCustomAlert(){
   document.getElementById('overlay-custom-alert').classList.remove('open');
 }
+let _customConfirmResolve = null;
+function showConfirm(msg){
+  document.getElementById('custom-confirm-message').textContent = msg;
+  document.getElementById('overlay-custom-confirm').classList.add('open');
+  return new Promise(resolve=>{ _customConfirmResolve = resolve; });
+}
+function resolveCustomConfirm(result){
+  document.getElementById('overlay-custom-confirm').classList.remove('open');
+  if(_customConfirmResolve){ const r = _customConfirmResolve; _customConfirmResolve = null; r(result); }
+}
 document.addEventListener('keydown', e=>{
-  if((e.key==='Enter' || e.key==='Escape') && document.getElementById('overlay-custom-alert').classList.contains('open')){
-    closeCustomAlert();
+  if(document.getElementById('overlay-custom-alert').classList.contains('open')){
+    if(e.key==='Enter' || e.key==='Escape') closeCustomAlert();
+  }
+  if(document.getElementById('overlay-custom-confirm').classList.contains('open')){
+    if(e.key==='Enter') resolveCustomConfirm(true);
+    if(e.key==='Escape') resolveCustomConfirm(false);
   }
 });
 
@@ -2364,9 +2392,9 @@ function saveModal(){
   render();
 }
 
-function deleteFromModal(){
+async function deleteFromModal(){
   if(!editingId) return;
-  if(!confirm('Eliminar esta ficha? No se puede deshacer.')) return;
+  if(!(await showConfirm('Eliminar esta ficha? No se puede deshacer.'))) return;
   items = items.filter(i=>i.id!==editingId);
   saveItems();
   closeModal();

@@ -1628,13 +1628,9 @@ function openOrdenProduccion(id){
   document.getElementById('op-modal-subtitulo').textContent = `${it.cliente} — ${it.descripcion||'Sin descripcion'}`;
   renderOpEstadoBotones(it);
   const archBtn = document.getElementById('op-archivar-field');
-  if(opTieneContenido(op)){
-    archBtn.innerHTML = op.archivada
-      ? `<button type="button" class="btn-ghost" style="width:100%;" onclick="desarchivarOP()">&#8617; Sacar OP del archivo</button>`
-      : `<button type="button" class="btn-ghost" id="btn-archivar-op" style="width:100%;" onclick="archivarOPConValidacion()">&#128230; Archivar OP</button>`;
-  } else {
-    archBtn.innerHTML = '';
-  }
+  archBtn.innerHTML = op.archivada
+    ? `<button type="button" class="btn-ghost" style="width:100%;" onclick="desarchivarOP()">&#8617; Sacar OP del archivo</button>`
+    : `<button type="button" class="btn-ghost" id="btn-archivar-op" style="width:100%;" onclick="archivarOPConValidacion()">&#128230; Archivar OP</button>`;
 
   const listaProcesos = allProcesos().map(nombre=>{
     const existente = procesosGuardados.find(p=>p.nombre===nombre);

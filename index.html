@@ -1577,8 +1577,8 @@ function openOrdenProduccion(id){
   const sugeridosProc = PROCESOS_SUGERIDOS[it.categoria] || [];
   const sugeridosMat = MATERIALES_SUGERIDOS[it.categoria] || [];
 
-  const numeroMostrar = op.numero ? ('#'+String(op.numero).padStart(3,'0')) : '(sin numero aun)';
-  document.getElementById('op-modal-titulo').textContent = `Orden de Produccion ${numeroMostrar}`;
+  const numeroPreview = op.numero || siguienteNumeroOP();
+  document.getElementById('op-modal-titulo').textContent = `Orden de Produccion #${String(numeroPreview).padStart(3,'0')}`;
   document.getElementById('op-modal-subtitulo').textContent = `${it.cliente} — ${it.descripcion||'Sin descripcion'}`;
   const archBtn = document.getElementById('op-archivar-field');
   if(opTieneContenido(op)){

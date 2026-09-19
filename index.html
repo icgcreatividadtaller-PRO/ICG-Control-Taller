@@ -602,6 +602,7 @@
   <div class="modal" style="max-width:560px;">
     <h2 id="op-modal-titulo">Orden de Produccion</h2>
     <div id="op-modal-subtitulo" style="margin:-12px 0 16px; font-size:12.5px; color:var(--ink-2); font-weight:700; text-transform:none;"></div>
+    <div id="op-estado-botones" style="display:flex; gap:8px; margin-bottom:16px;"></div>
 
     <div class="op-progress-track"><div class="op-progress-fill" id="op-progress-bar" style="width:0%"></div></div>
     <div id="op-progress-label" style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:16px; text-transform:none;">0 de 0 procesos completados (0%)</div>
@@ -1506,7 +1507,7 @@ function onProcAplicaChange(chk){
   }
   updateOpProgress();
 }
-function updateOpProgress(){
+function opProgresoLive(){
   const aplicaChecks = document.querySelectorAll('.op-proc-aplica:checked');
   const total = aplicaChecks.length;
   let completados = 0;
@@ -1515,10 +1516,55 @@ function updateOpProgress(){
     if(compEl && compEl.checked) completados++;
   });
   const pct = total ? Math.round((completados/total)*100) : 0;
+  return {total, completados, pct, completo: total===0 || completados===total};
+}
+function updateOpProgress(){
+  const {total, completados, pct} = opProgresoLive();
   const bar = document.getElementById('op-progress-bar');
   const label = document.getElementById('op-progress-label');
   if(bar) bar.style.width = pct+'%';
   if(label) label.textContent = `${completados} de ${total} procesos completados (${pct}%)`;
+  refreshArchivarOPDisabled();
+}
+function refreshArchivarOPDisabled(){
+  const btn = document.getElementById('btn-archivar-op');
+  if(!btn) return;
+  const it = items.find(i=>i.id===opItemId);
+  const progreso = opProgresoLive();
+  const habilitado = it && it.estado==='Entregado' && progreso.completo;
+  btn.disabled = !habilitado;
+  btn.title = habilitado ? '' : 'Solo se puede archivar cuando el proyecto esta Entregado y todos los procesos estan al 100%';
+}
+function renderOpEstadoBotones(it){
+  const estados = ['Completado','Listo para entrega','Entregado'];
+  document.getElementById('op-estado-botones').innerHTML = estados.map(e=>{
+    const activo = it.estado === e;
+    return `<button type="button" class="btn-ghost" style="flex:1; ${activo?'background:var(--purple); color:#fff; border-color:var(--purple);':''}" onclick="opAvanzarEstado('${e}')">${e}</button>`;
+  }).join('');
+}
+function opAvanzarEstado(estadoTarget){
+  const it = items.find(i=>i.id===opItemId);
+  if(!it) return;
+  applyEstadoTransition(it, estadoTarget);
+  saveItems();
+  renderOpEstadoBotones(it);
+  refreshArchivarOPDisabled();
+  render();
+}
+async function archivarOPConValidacion(){
+  const it = items.find(i=>i.id===opItemId);
+  if(!it || !it.ordenProduccion) return;
+  const progreso = opProgresoLive();
+  if(it.estado !== 'Entregado'){
+    showAlert('Esta orden solo se puede archivar cuando el proyecto ya este en estado Entregado.');
+    return;
+  }
+  if(!progreso.completo){
+    showAlert(`Faltan procesos por completar (${progreso.completados} de ${progreso.total}). No puedes archivar la orden hasta que esten al 100%.`);
+    return;
+  }
+  if(!(await showConfirm(`Vas a archivar la OP de "${it.cliente}". Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`))) return;
+  archivarOP();
 }
 function snapshotProcesos(){
   return allProcesos().map(nombre=>{
@@ -1580,14 +1626,12 @@ function openOrdenProduccion(id){
   const numeroPreview = op.numero || siguienteNumeroOP();
   document.getElementById('op-modal-titulo').textContent = `Orden de Produccion #${String(numeroPreview).padStart(3,'0')}`;
   document.getElementById('op-modal-subtitulo').textContent = `${it.cliente} — ${it.descripcion||'Sin descripcion'}`;
+  renderOpEstadoBotones(it);
   const archBtn = document.getElementById('op-archivar-field');
   if(opTieneContenido(op)){
     archBtn.innerHTML = op.archivada
       ? `<button type="button" class="btn-ghost" style="width:100%;" onclick="desarchivarOP()">&#8617; Sacar OP del archivo</button>`
-      : `<div style="display:flex; gap:8px;">
-          <button type="button" class="btn-ghost" style="flex:1;" onclick="archivarOP()">&#128230; Archivar esta OP</button>
-          <button type="button" class="btn-ghost" style="flex:1;" onclick="confirmarOrdenCompletadaModal()">&#9989; Orden Completada</button>
-        </div>`;
+      : `<button type="button" class="btn-ghost" id="btn-archivar-op" style="width:100%;" onclick="archivarOPConValidacion()">&#128230; Archivar OP</button>`;
   } else {
     archBtn.innerHTML = '';
   }
@@ -1622,12 +1666,6 @@ function archivarOP(){
   saveItems();
   closeOrdenProduccion();
   render();
-}
-async function confirmarOrdenCompletadaModal(){
-  const it = items.find(i=>i.id===opItemId);
-  if(!it || !it.ordenProduccion) return;
-  if(!(await showConfirm(`Vas a marcar la OP de "${it.cliente}" como Completada. Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`))) return;
-  archivarOP();
 }
 function desarchivarOP(){
   const it = items.find(i=>i.id===opItemId);

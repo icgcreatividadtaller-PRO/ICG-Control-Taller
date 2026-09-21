@@ -2112,7 +2112,7 @@ function renderPanorama(activos){
   const atrasados = activos.filter(isCriticalAlert);
   const corpSinOP = activos.filter(it=>it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion));
   const todosPausados = activos.filter(it=>it.pausado);
-  const faltaFacturar = activos.filter(it=>it.estado==='Entregado' && !it.facturado);
+  const faltaFacturar = activos.filter(it=>it.estado==='Entregado' && it.tipoCliente==='corporativa' && !it.facturado);
   const pendientesCotizar = activos.filter(it=>it.estado==='Pendiente de cotizar');
   const pendientesPago = activos.filter(it=>it.pendientePago);
 
@@ -3304,7 +3304,7 @@ function render(){
     if(isCriticalAlert(it)) panoramaIds.add(it.id);
     if(it.pausado) panoramaIds.add(it.id);
     if(it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion)) panoramaIds.add(it.id);
-    if(it.estado==='Entregado' && !it.facturado) panoramaIds.add(it.id);
+    if(it.estado==='Entregado' && it.tipoCliente==='corporativa' && !it.facturado) panoramaIds.add(it.id);
     if(it.estado==='Pendiente de cotizar') panoramaIds.add(it.id);
     if(it.pendientePago) panoramaIds.add(it.id);
   });

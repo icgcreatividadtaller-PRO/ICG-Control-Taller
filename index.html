@@ -607,17 +607,31 @@
     <div class="op-progress-track"><div class="op-progress-fill" id="op-progress-bar" style="width:0%"></div></div>
     <div id="op-progress-label" style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:16px; text-transform:none;">0 de 0 procesos completados (0%)</div>
 
-    <div class="field">
-      <label>Procesos</label>
-      <div class="op-list-head"><span>Proceso</span><span>Aplica</span><span>Listo</span></div>
-      <div id="op-procesos-list" class="op-scroll-list"></div>
-      <button type="button" class="btn-ghost" style="width:100%; margin-top:6px;" onclick="agregarProcesoCustom()">+ Agregar proceso</button>
+    <div class="field" id="op-tipo-selector" style="display:none;">
+      <label>Area de esta orden</label>
+      <div id="op-tipo-sugerido-hint" style="font-size:11.5px; color:var(--ink-2); margin-bottom:8px;"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <button type="button" class="btn-ghost" onclick="elegirTipoOP('offset')">Offset</button>
+        <button type="button" class="btn-ghost" onclick="elegirTipoOP('rotulos')">Rotulos &amp; Senaletica</button>
+        <button type="button" class="btn-ghost" onclick="elegirTipoOP('impresion')">Impresion &amp; Gran Formato</button>
+        <button type="button" class="btn-ghost" onclick="elegirTipoOP('laser')">Laser</button>
+      </div>
     </div>
 
-    <div class="field">
-      <label>Materiales</label>
-      <div id="op-materiales-list" class="op-scroll-list"></div>
-      <button type="button" class="btn-ghost" style="width:100%; margin-top:6px;" onclick="agregarMaterialCustom()">+ Agregar material</button>
+    <div id="op-checklist-secciones">
+      <div id="op-tipo-actual-indicator" style="display:none; margin:-8px 0 10px; font-size:11.5px; color:var(--ink-2); font-weight:700; text-transform:none;"></div>
+      <div class="field">
+        <label>Procesos <button type="button" class="icon-btn" title="Editar lista de procesos" onclick="abrirGestionLista('procesos')">&#9998;</button></label>
+        <div class="op-list-head"><span>Proceso</span><span>Aplica</span><span>Listo</span></div>
+        <div id="op-procesos-list" class="op-scroll-list"></div>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:6px;" onclick="agregarProcesoCustom()">+ Agregar proceso</button>
+      </div>
+
+      <div class="field">
+        <label>Materiales <button type="button" class="icon-btn" title="Editar lista de materiales" onclick="abrirGestionLista('materiales')">&#9998;</button></label>
+        <div id="op-materiales-list" class="op-scroll-list"></div>
+        <button type="button" class="btn-ghost" style="width:100%; margin-top:6px;" onclick="agregarMaterialCustom()">+ Agregar material</button>
+      </div>
     </div>
     <div class="field"><label>Notas de materiales (cantidades, detalles)</label><textarea id="op-materiales-notas" placeholder="Ej: Vinil - 2 yardas" style="text-transform:none;"></textarea></div>
 
@@ -729,6 +743,20 @@
   </div>
 </div>
 
+<div class="overlay" id="overlay-op-gestionar-lista">
+  <div class="modal" style="max-width:420px; margin-top:10vh;">
+    <h2 id="gestion-lista-titulo" style="margin-bottom:14px;">Editar lista</h2>
+    <div id="gestion-lista-items" style="max-height:280px; overflow-y:auto; margin-bottom:14px;"></div>
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <input id="gestion-lista-nuevo" placeholder="Nombre nuevo..." style="flex:1;" onkeydown="if(event.key==='Enter'){ event.preventDefault(); agregarAListaTipoDesdeGestion(); }">
+      <button type="button" class="btn-primary" style="margin-left:0;" onclick="agregarAListaTipoDesdeGestion()">+ Agregar</button>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn-ghost" onclick="cerrarGestionLista()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="autosave-badge"><span class="gear">&#9881;</span> Autoguardado</div>
 
 <script>
@@ -776,6 +804,48 @@ const MATERIALES_SUGERIDOS = {
   'Rotulación': ['Sintra','Vinil','Vinil fondo gris','Vinil one vision','Banner','Vinil transparente'],
   'Offset': ['Bond 20','Bond 24','NCR','Cartonite','Opalina']
 };
+const OP_TIPOS = [
+  {key:'offset', label:'Offset'},
+  {key:'rotulos', label:'Rotulos & Senaletica'},
+  {key:'impresion', label:'Impresion & Gran Formato'},
+  {key:'laser', label:'Laser'}
+];
+const OP_PROCESOS_DEFAULT = {
+  offset: ['Compra de materiales','Diseño','CTP','Impresión','Terminación','Numeración','Empaque','Entrega'],
+  rotulos: ['Compra de materiales','Diseño','Impresión del vinil','Laminado','Rotulación','Instalación','Corte de vinil','Aplicación/Transferencia','Entrega'],
+  impresion: ['Compra de materiales','Diseño','Impresión','Impresión lona','Corte','Terminación','Ojaletes','Tensando','Empaque','Entrega'],
+  laser: ['Compra de materiales','Diseño','Corte láser','Grabado','Pulido','Doblado/Formado','Ensamblaje','Empaque','Entrega']
+};
+const OP_MATERIALES_DEFAULT = {
+  offset: ['Bond 20','Bond 24','NCR','Cartonite','Opalina'],
+  rotulos: ['Sintra','Vinil','Vinil fondo gris','Vinil one vision','Vinil transparente','Banner','Acrílico'],
+  impresion: ['Banner','Vinil transparente'],
+  laser: ['Acrílico']
+};
+let procesosPorTipo = JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
+let materialesPorTipo = JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
+let opTipoActual = null;
+let gestionarListaModo = null;
+function tipoLabel(key){ const t = OP_TIPOS.find(t=>t.key===key); return t ? t.label : key; }
+function procesosDeTipo(tipo){ return (procesosPorTipo && procesosPorTipo[tipo]) ? procesosPorTipo[tipo] : (OP_PROCESOS_DEFAULT[tipo]||[]); }
+function materialesDeTipo(tipo){ return (materialesPorTipo && materialesPorTipo[tipo]) ? materialesPorTipo[tipo] : (OP_MATERIALES_DEFAULT[tipo]||[]); }
+function sugerirTipoPorCategoria(categoria){
+  const mapa = {
+    'Offset':'offset',
+    'Rótulo':'rotulos','Rotulación':'rotulos','Vinil Cortado':'rotulos','Pandereta':'rotulos','Pintura':'rotulos',
+    'Acrílico':'laser','Láser':'laser',
+    'Digital':'impresion','Fotografía':'impresion','Stickers':'impresion'
+  };
+  return mapa[categoria] || null;
+}
+async function saveProcesosPorTipo(){
+  try{ await storageSet('taller-procesos-por-tipo', JSON.stringify(procesosPorTipo)); }
+  catch(e){ /* no bloquea el flujo principal */ }
+}
+async function saveMaterialesPorTipo(){
+  try{ await storageSet('taller-materiales-por-tipo', JSON.stringify(materialesPorTipo)); }
+  catch(e){ /* no bloquea el flujo principal */ }
+}
 let META_MIN = 75000;
 let META_MAX = 99000;
 
@@ -1107,7 +1177,7 @@ function initAuthWatcher(){
 async function loadItems(){
   const myGeneration = ++loadGeneration;
   let cargado = false;
-  let nuevoItems, nuevoSyncedMap, nuevaCategoriasExtra, nuevoProcesosExtra, nuevoMaterialesExtra, nuevoMetaMin, nuevoMetaMax;
+  let nuevoItems, nuevoSyncedMap, nuevaCategoriasExtra, nuevoProcesosExtra, nuevoMaterialesExtra, nuevoMetaMin, nuevoMetaMax, nuevoProcesosPorTipo, nuevoMaterialesPorTipo;
   for(let intento=1; intento<=3 && !cargado; intento++){
     try{
       const migrados = await migrarDocUnicoSiExiste();
@@ -1125,6 +1195,10 @@ async function loadItems(){
       nuevoProcesosExtra = procRes && procRes.value ? JSON.parse(procRes.value) : [];
       const matRes = await storageGet('taller-materiales-extra');
       nuevoMaterialesExtra = matRes && matRes.value ? JSON.parse(matRes.value) : [];
+      const procTipoRes = await storageGet('taller-procesos-por-tipo');
+      nuevoProcesosPorTipo = procTipoRes && procTipoRes.value ? JSON.parse(procTipoRes.value) : JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
+      const matTipoRes = await storageGet('taller-materiales-por-tipo');
+      nuevoMaterialesPorTipo = matTipoRes && matTipoRes.value ? JSON.parse(matTipoRes.value) : JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
       const metasRes = await storageGet('taller-metas');
       if(metasRes && metasRes.value){
         const m = JSON.parse(metasRes.value);
@@ -1150,6 +1224,8 @@ async function loadItems(){
     categoriasExtra = nuevaCategoriasExtra;
     procesosExtra = nuevoProcesosExtra;
     materialesExtra = nuevoMaterialesExtra;
+    procesosPorTipo = nuevoProcesosPorTipo;
+    materialesPorTipo = nuevoMaterialesPorTipo;
     if(nuevoMetaMin) META_MIN = nuevoMetaMin;
     if(nuevoMetaMax) META_MAX = nuevoMetaMax;
     setStorageBanner(false);
@@ -1326,6 +1402,8 @@ function exportBackup(){
     categoriasExtra: categoriasExtra,
     procesosExtra: procesosExtra,
     materialesExtra: materialesExtra,
+    procesosPorTipo: procesosPorTipo,
+    materialesPorTipo: materialesPorTipo,
     metas: {min: META_MIN, max: META_MAX}
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
@@ -1345,15 +1423,17 @@ function handleImportFile(ev){
   reader.onload = async () => {
     try{
       const parsed = JSON.parse(reader.result);
-      let nuevosItems, nuevasCategorias, nuevasMetas, nuevosProcesos, nuevosMateriales;
+      let nuevosItems, nuevasCategorias, nuevasMetas, nuevosProcesos, nuevosMateriales, nuevosProcesosPorTipo, nuevosMaterialesPorTipo;
       if(Array.isArray(parsed)){
-        nuevosItems = parsed; nuevasCategorias = []; nuevasMetas = null; nuevosProcesos = []; nuevosMateriales = [];
+        nuevosItems = parsed; nuevasCategorias = []; nuevasMetas = null; nuevosProcesos = []; nuevosMateriales = []; nuevosProcesosPorTipo = null; nuevosMaterialesPorTipo = null;
       } else if(parsed && Array.isArray(parsed.items)){
         nuevosItems = parsed.items;
         nuevasCategorias = parsed.categoriasExtra || [];
         nuevasMetas = parsed.metas || null;
         nuevosProcesos = parsed.procesosExtra || [];
         nuevosMateriales = parsed.materialesExtra || [];
+        nuevosProcesosPorTipo = parsed.procesosPorTipo || null;
+        nuevosMaterialesPorTipo = parsed.materialesPorTipo || null;
       } else {
         throw new Error('formato invalido');
       }
@@ -1362,11 +1442,15 @@ function handleImportFile(ev){
       categoriasExtra = nuevasCategorias;
       procesosExtra = nuevosProcesos;
       materialesExtra = nuevosMateriales;
+      procesosPorTipo = nuevosProcesosPorTipo || JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
+      materialesPorTipo = nuevosMaterialesPorTipo || JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
       if(nuevasMetas){ META_MIN = nuevasMetas.min || META_MIN; META_MAX = nuevasMetas.max || META_MAX; }
       saveItems();
       saveCategoriasExtra();
       saveProcesosExtra();
       saveMaterialesExtra();
+      saveProcesosPorTipo();
+      saveMaterialesPorTipo();
       saveMetas();
       render();
       showAlert('Respaldo restaurado correctamente.');
@@ -1567,14 +1651,16 @@ async function archivarOPConValidacion(){
   archivarOP();
 }
 function snapshotProcesos(){
-  return allProcesos().map(nombre=>{
+  const nombres = opTipoActual ? procesosDeTipo(opTipoActual) : allProcesos();
+  return nombres.map(nombre=>{
     const a = document.querySelector(`.op-proc-aplica[data-nombre="${CSS.escape(nombre)}"]`);
     const c = document.querySelector(`.op-proc-completado[data-nombre="${CSS.escape(nombre)}"]`);
     return {nombre, aplica: a?a.checked:false, completado: c?c.checked:false};
   });
 }
 function snapshotMateriales(){
-  return allMateriales().map(nombre=>{
+  const nombres = opTipoActual ? materialesDeTipo(opTipoActual) : allMateriales();
+  return nombres.map(nombre=>{
     const a = document.querySelector(`.op-mat-aplica[data-nombre="${CSS.escape(nombre)}"]`);
     return {nombre, aplica: a?a.checked:false};
   });
@@ -1584,7 +1670,12 @@ function agregarProcesoCustom(){
   if(!nombre || !nombre.trim()) return;
   const limpio = nombre.trim();
   const actuales = snapshotProcesos();
-  if(!PROCESOS_BASE.includes(limpio) && !procesosExtra.includes(limpio)){
+  if(opTipoActual){
+    if(!procesosPorTipo[opTipoActual].includes(limpio)){
+      procesosPorTipo[opTipoActual].push(limpio);
+      saveProcesosPorTipo();
+    }
+  } else if(!PROCESOS_BASE.includes(limpio) && !procesosExtra.includes(limpio)){
     procesosExtra.push(limpio);
     saveProcesosExtra();
   }
@@ -1596,7 +1687,12 @@ function agregarMaterialCustom(){
   if(!nombre || !nombre.trim()) return;
   const limpio = nombre.trim();
   const actuales = snapshotMateriales();
-  if(!MATERIALES_BASE.includes(limpio) && !materialesExtra.includes(limpio)){
+  if(opTipoActual){
+    if(!materialesPorTipo[opTipoActual].includes(limpio)){
+      materialesPorTipo[opTipoActual].push(limpio);
+      saveMaterialesPorTipo();
+    }
+  } else if(!MATERIALES_BASE.includes(limpio) && !materialesExtra.includes(limpio)){
     materialesExtra.push(limpio);
     saveMaterialesExtra();
   }
@@ -1620,8 +1716,8 @@ function openOrdenProduccion(id){
   const procesosGuardados = op.procesos || [];
   const materialesGuardados = op.materiales || [];
   const esNuevo = procesosGuardados.length===0 && materialesGuardados.length===0;
-  const sugeridosProc = PROCESOS_SUGERIDOS[it.categoria] || [];
-  const sugeridosMat = MATERIALES_SUGERIDOS[it.categoria] || [];
+
+  opTipoActual = op.tipo || null;
 
   const numeroPreview = op.numero || siguienteNumeroOP();
   document.getElementById('op-modal-titulo').textContent = `Orden de Produccion #${String(numeroPreview).padStart(3,'0')}`;
@@ -1632,21 +1728,53 @@ function openOrdenProduccion(id){
     ? `<button type="button" class="btn-ghost" style="width:100%;" onclick="desarchivarOP()">&#8617; Sacar OP del archivo</button>`
     : `<button type="button" class="btn-ghost" id="btn-archivar-op" style="width:100%;" onclick="archivarOPConValidacion()">&#128230; Archivar OP</button>`;
 
-  const listaProcesos = allProcesos().map(nombre=>{
-    const existente = procesosGuardados.find(p=>p.nombre===nombre);
-    return {
-      nombre,
-      aplica: existente ? existente.aplica : (esNuevo && sugeridosProc.includes(nombre)),
-      completado: existente ? existente.completado : false
-    };
-  });
-  const listaMateriales = allMateriales().map(nombre=>{
-    const existente = materialesGuardados.find(m=>m.nombre===nombre);
-    return { nombre, aplica: existente ? existente.aplica : (esNuevo && sugeridosMat.includes(nombre)) };
-  });
+  const usaSistemaNuevo = !!opTipoActual || esNuevo;
 
-  renderProcesosList(listaProcesos);
-  renderMaterialesList(listaMateriales);
+  if(usaSistemaNuevo && !opTipoActual){
+    document.getElementById('op-tipo-selector').style.display = '';
+    document.getElementById('op-checklist-secciones').style.display = 'none';
+    const sugerido = sugerirTipoPorCategoria(it.categoria);
+    document.getElementById('op-tipo-sugerido-hint').textContent = sugerido ? `Sugerido segun la categoria del proyecto: ${tipoLabel(sugerido)}` : '';
+    document.getElementById('op-procesos-list').innerHTML = '';
+    document.getElementById('op-materiales-list').innerHTML = '';
+  } else if(usaSistemaNuevo && opTipoActual){
+    document.getElementById('op-tipo-selector').style.display = 'none';
+    document.getElementById('op-checklist-secciones').style.display = '';
+    const indicator = document.getElementById('op-tipo-actual-indicator');
+    indicator.style.display = '';
+    indicator.innerHTML = `Area: <b>${tipoLabel(opTipoActual)}</b> — <a href="#" onclick="cambiarTipoOP(event)" style="color:var(--purple);">cambiar</a>`;
+    const listaProcesos = procesosDeTipo(opTipoActual).map(nombre=>{
+      const existente = procesosGuardados.find(p=>p.nombre===nombre);
+      return existente || {nombre, aplica:false, completado:false};
+    });
+    const listaMateriales = materialesDeTipo(opTipoActual).map(nombre=>{
+      const existente = materialesGuardados.find(m=>m.nombre===nombre);
+      return existente || {nombre, aplica:false};
+    });
+    renderProcesosList(listaProcesos);
+    renderMaterialesList(listaMateriales);
+  } else {
+    document.getElementById('op-tipo-selector').style.display = 'none';
+    document.getElementById('op-checklist-secciones').style.display = '';
+    document.getElementById('op-tipo-actual-indicator').style.display = 'none';
+    const sugeridosProc = PROCESOS_SUGERIDOS[it.categoria] || [];
+    const sugeridosMat = MATERIALES_SUGERIDOS[it.categoria] || [];
+    const listaProcesos = allProcesos().map(nombre=>{
+      const existente = procesosGuardados.find(p=>p.nombre===nombre);
+      return {
+        nombre,
+        aplica: existente ? existente.aplica : (esNuevo && sugeridosProc.includes(nombre)),
+        completado: existente ? existente.completado : false
+      };
+    });
+    const listaMateriales = allMateriales().map(nombre=>{
+      const existente = materialesGuardados.find(m=>m.nombre===nombre);
+      return { nombre, aplica: existente ? existente.aplica : (esNuevo && sugeridosMat.includes(nombre)) };
+    });
+    renderProcesosList(listaProcesos);
+    renderMaterialesList(listaMateriales);
+  }
+
   document.getElementById('op-materiales-notas').value = op.materialesNotas || '';
   document.getElementById('op-tamano').value = op.tamano || '';
   document.getElementById('op-cantidad').value = op.cantidad || '';
@@ -1655,6 +1783,75 @@ function openOrdenProduccion(id){
   document.getElementById('overlay-op').classList.add('open');
 }
 function closeOrdenProduccion(){ document.getElementById('overlay-op').classList.remove('open'); }
+function elegirTipoOP(tipoKey){
+  opTipoActual = tipoKey;
+  document.getElementById('op-tipo-selector').style.display = 'none';
+  document.getElementById('op-checklist-secciones').style.display = '';
+  const indicator = document.getElementById('op-tipo-actual-indicator');
+  indicator.style.display = '';
+  indicator.innerHTML = `Area: <b>${tipoLabel(tipoKey)}</b> — <a href="#" onclick="cambiarTipoOP(event)" style="color:var(--purple);">cambiar</a>`;
+  const listaProcesos = procesosDeTipo(tipoKey).map(nombre=>({nombre, aplica:false, completado:false}));
+  const listaMateriales = materialesDeTipo(tipoKey).map(nombre=>({nombre, aplica:false}));
+  renderProcesosList(listaProcesos);
+  renderMaterialesList(listaMateriales);
+}
+async function cambiarTipoOP(ev){
+  if(ev) ev.preventDefault();
+  const progreso = opProgresoLive();
+  const materialesMarcados = document.querySelectorAll('.op-mat-aplica:checked').length;
+  if(progreso.total>0 || materialesMarcados>0){
+    if(!(await showConfirm('Cambiar de area borra las casillas marcadas en el checklist actual (sin guardar). ¿Continuar?'))) return;
+  }
+  opTipoActual = null;
+  document.getElementById('op-checklist-secciones').style.display = 'none';
+  document.getElementById('op-tipo-selector').style.display = '';
+  const it = items.find(i=>i.id===opItemId);
+  const sugerido = it ? sugerirTipoPorCategoria(it.categoria) : null;
+  document.getElementById('op-tipo-sugerido-hint').textContent = sugerido ? `Sugerido segun la categoria del proyecto: ${tipoLabel(sugerido)}` : '';
+}
+function refrescarChecklistTipoActual(){
+  if(!opTipoActual) return;
+  const actualesProc = snapshotProcesos();
+  renderProcesosList(procesosDeTipo(opTipoActual).map(nombre=>actualesProc.find(p=>p.nombre===nombre) || {nombre, aplica:false, completado:false}));
+  const actualesMat = snapshotMateriales();
+  renderMaterialesList(materialesDeTipo(opTipoActual).map(nombre=>actualesMat.find(m=>m.nombre===nombre) || {nombre, aplica:false}));
+}
+function abrirGestionLista(modo){
+  if(!opTipoActual){ showAlert('Elige primero el area de esta orden.'); return; }
+  gestionarListaModo = modo;
+  renderGestionLista();
+  document.getElementById('overlay-op-gestionar-lista').classList.add('open');
+}
+function renderGestionLista(){
+  const lista = gestionarListaModo==='procesos' ? procesosDeTipo(opTipoActual) : materialesDeTipo(opTipoActual);
+  document.getElementById('gestion-lista-titulo').textContent = (gestionarListaModo==='procesos' ? 'Editar procesos — ' : 'Editar materiales — ') + tipoLabel(opTipoActual);
+  document.getElementById('gestion-lista-items').innerHTML = lista.length ? lista.map((nombre,idx)=>`
+    <div class="archive-row">
+      <b style="flex:1;">${nombre}</b>
+      <button class="icon-btn" onclick="quitarDeListaTipo(${idx})">&#10005; Quitar</button>
+    </div>`).join('') : '<div class="empty-state"><div class="big">Sin elementos</div></div>';
+}
+function quitarDeListaTipo(idx){
+  const arr = gestionarListaModo==='procesos' ? procesosPorTipo[opTipoActual] : materialesPorTipo[opTipoActual];
+  arr.splice(idx,1);
+  if(gestionarListaModo==='procesos') saveProcesosPorTipo(); else saveMaterialesPorTipo();
+  renderGestionLista();
+  refrescarChecklistTipoActual();
+}
+function agregarAListaTipoDesdeGestion(){
+  const input = document.getElementById('gestion-lista-nuevo');
+  const nombre = input.value.trim();
+  if(!nombre) return;
+  const arr = gestionarListaModo==='procesos' ? procesosPorTipo[opTipoActual] : materialesPorTipo[opTipoActual];
+  if(!arr.includes(nombre)) arr.push(nombre);
+  input.value = '';
+  if(gestionarListaModo==='procesos') saveProcesosPorTipo(); else saveMaterialesPorTipo();
+  renderGestionLista();
+  refrescarChecklistTipoActual();
+}
+function cerrarGestionLista(){
+  document.getElementById('overlay-op-gestionar-lista').classList.remove('open');
+}
 function archivarOP(){
   const it = items.find(i=>i.id===opItemId);
   if(!it || !it.ordenProduccion) return;
@@ -1676,9 +1873,11 @@ function saveOrdenProduccion(){
   if(!it) return;
   const numeroPrevio = it.ordenProduccion ? it.ordenProduccion.numero : null;
   const archivadaPrevia = it.ordenProduccion ? it.ordenProduccion.archivada : false;
+  const tipoPrevio = it.ordenProduccion ? it.ordenProduccion.tipo : null;
   it.ordenProduccion = {
     numero: numeroPrevio || siguienteNumeroOP(),
     archivada: !!archivadaPrevia,
+    tipo: opTipoActual || tipoPrevio || null,
     procesos: snapshotProcesos().filter(p=>p.aplica),
     materiales: snapshotMateriales().filter(m=>m.aplica),
     materialesNotas: document.getElementById('op-materiales-notas').value.trim(),

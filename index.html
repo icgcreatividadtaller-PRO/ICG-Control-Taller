@@ -76,6 +76,9 @@
   select.filter{background:var(--card); border:1.5px solid var(--border); border-radius:6px; padding:9px 11px; font-size:12px; font-family:inherit; color:var(--ink-2); max-width:170px; text-transform:uppercase;}
   .btn-primary{background:var(--yellow); color:var(--purple); border:none; padding:10px 18px; border-radius:6px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; margin-left:auto; text-transform:uppercase;}
   .btn-ghost{background:var(--card); border:1.5px solid var(--border-strong); color:var(--ink); padding:8px 14px; border-radius:6px; font-size:12px; cursor:pointer; font-family:inherit; font-weight:700; text-transform:uppercase;}
+  .btn-tipo-op{padding:14px 10px; border-radius:8px; border:none; font-family:inherit; font-weight:800; font-size:12.5px; text-transform:uppercase; cursor:pointer; transition:transform .1s, filter .1s;}
+  .btn-tipo-op:hover{filter:brightness(1.1); transform:translateY(-1px);}
+  .btn-tipo-op:active{filter:brightness(0.95); transform:translateY(0);}
   .btn-icon{background:var(--card); border:1.5px solid var(--border-strong); color:var(--purple); width:34px; height:34px; border-radius:6px; cursor:pointer; font-size:15px; font-weight:700;}
 
   .subtabs{display:flex; gap:8px; margin-bottom:18px;}
@@ -611,10 +614,10 @@
       <label>Area de esta orden</label>
       <div id="op-tipo-sugerido-hint" style="font-size:11.5px; color:var(--ink-2); margin-bottom:8px;"></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-        <button type="button" class="btn-ghost" onclick="elegirTipoOP('offset')">Offset</button>
-        <button type="button" class="btn-ghost" onclick="elegirTipoOP('rotulos')">Rotulos &amp; Senaletica</button>
-        <button type="button" class="btn-ghost" onclick="elegirTipoOP('impresion')">Impresion &amp; Gran Formato</button>
-        <button type="button" class="btn-ghost" onclick="elegirTipoOP('laser')">Laser</button>
+        <button type="button" class="btn-tipo-op" style="background:#3F2364; color:#fff; border-color:#3F2364;" onclick="elegirTipoOP('offset')">Offset</button>
+        <button type="button" class="btn-tipo-op" style="background:#E67E22; color:#fff; border-color:#E67E22;" onclick="elegirTipoOP('rotulos')">Rotulos &amp; Senaletica</button>
+        <button type="button" class="btn-tipo-op" style="background:#2E86DE; color:#fff; border-color:#2E86DE;" onclick="elegirTipoOP('impresion')">Impresion &amp; Gran Formato</button>
+        <button type="button" class="btn-tipo-op" style="background:#16A085; color:#fff; border-color:#16A085;" onclick="elegirTipoOP('laser')">Laser</button>
       </div>
     </div>
 
@@ -3283,7 +3286,9 @@ function renderResumen(){
 }
 
 function render(){
-  document.getElementById('btn-nuevo-proyecto').textContent = view==='cotizaciones' ? '+ Nueva cotizacion' : '+ Nuevo proyecto';
+  const btnNuevo = document.getElementById('btn-nuevo-proyecto');
+  btnNuevo.style.display = view==='ordenes' ? 'none' : '';
+  btnNuevo.textContent = view==='cotizaciones' ? '+ Nueva cotizacion' : '+ Nuevo proyecto';
   refreshCategoriaFilter();
   const q = document.getElementById('search').value;
   const filtOrigen = document.getElementById('filter-origen').value;

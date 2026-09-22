@@ -452,7 +452,7 @@
       <select class="filter" id="filter-tipo" onchange="render()">
         <option value="">Todos los tipos</option>
         <option value="counter">Counter</option>
-        <option value="corporativa">Corporativa</option>
+        <option value="corporativa">Corporativo</option>
       </select>
       <button class="btn-primary" id="btn-nuevo-proyecto" onclick="handleNuevoProyectoClick()">+ Nuevo proyecto</button>
     </div>
@@ -470,7 +470,7 @@
         <input type="checkbox" id="f-tipo-counter" onchange="handleTipoClienteChange('counter')">
         <label style="margin:0; margin-right:16px;">Counter</label>
         <input type="checkbox" id="f-tipo-corporativa" onchange="handleTipoClienteChange('corporativa')">
-        <label style="margin:0;">Corporativa</label>
+        <label style="margin:0;">Corporativo</label>
       </div>
       <div id="field-fecha-recepcion-slot" style="margin-top:10px;"></div>
     </div>
@@ -521,12 +521,12 @@
     </div>
     <div class="oc-line" id="field-tiene-oc-line">
       <input type="checkbox" id="f-tiene-oc" onchange="document.getElementById('f-numero-oc').disabled=!this.checked">
-      <label style="margin:0;">Tiene orden de compra</label>
+      <label style="margin:0;">Orden de Compra</label>
       <input id="f-numero-oc" placeholder="Numero de OC" style="max-width:170px;" disabled>
     </div>
     <div class="oc-line" id="field-facturado-line">
       <input type="checkbox" id="f-facturado">
-      <label style="margin:0;">Ya se facturó</label>
+      <label style="margin:0;">Facturado</label>
       <span id="f-facturado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
     <div class="oc-line" id="field-pago-contado-line">
@@ -867,7 +867,7 @@ let resumenDiarioDrilldownTipo = null;
 let listadoSort = {field:'fecha', dir:1};
 
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,''); }
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+function todayStr(){ return toDs(new Date()); }
 function daysSince(dateStr){ return Math.floor((new Date(todayStr()) - new Date(dateStr)) / 86400000); }
 function prioWeight(p){ return p==='Alta'?3 : p==='Media'?2 : p==='Baja'?1 : 0; }
 function phaseKeyOf(estado){
@@ -1476,6 +1476,18 @@ function handleTipoClienteChange(cual){
   if(cual==='corporativa' && document.getElementById('f-tipo-corporativa').checked){
     document.getElementById('f-tipo-counter').checked = false;
   }
+  actualizarCamposPorTipoCliente();
+}
+function actualizarCamposPorTipoCliente(){
+  const tipo = resolvedTipoCliente();
+  const esCotizacion = !editingId && view==='cotizaciones';
+  const esCreacion = !editingId;
+  document.getElementById('field-tiene-oc-line').style.display = (!esCotizacion && tipo==='corporativa') ? '' : 'none';
+  document.getElementById('field-facturado-line').style.display = (!esCreacion && tipo==='corporativa') ? 'flex' : 'none';
+  const mostrarCounter = (!esCotizacion && tipo==='counter');
+  document.getElementById('field-pago-contado-line').style.display = mostrarCounter ? '' : 'none';
+  document.getElementById('field-pendiente-pago-line').style.display = mostrarCounter ? '' : 'none';
+  toggleFechaPagoVisible();
 }
 function resolvedTipoCliente(){
   if(document.getElementById('f-tipo-counter').checked) return 'counter';
@@ -1486,7 +1498,7 @@ function tipoClienteTag(it){
   if(!it.tipoCliente) return '<span class="dash">-</span>';
   return it.tipoCliente==='counter'
     ? '<span class="tipo-tag tipo-counter">Counter</span>'
-    : '<span class="tipo-tag tipo-corporativa">Corporativa</span>';
+    : '<span class="tipo-tag tipo-corporativa">Corporativo</span>';
 }
 function handleOrigenChange(){
   const nuevoOrigen = document.getElementById('f-origen').value;
@@ -2391,7 +2403,7 @@ function printFicha(){
     <div class="print-row"><b>Estado actual</b><span>${it.estado}</span></div>
     <div class="print-row"><b>Categoria</b><span>${it.categoria||'-'}</span></div>
     <div class="print-row"><b>Origen</b><span>${it.origen==='cotizacion'?'Pide cotizacion':'Directo (sin cotizar)'}</span></div>
-    <div class="print-row"><b>Tipo de Cliente</b><span>${it.tipoCliente==='counter'?'Counter':it.tipoCliente==='corporativa'?'Corporativa':'-'}</span></div>
+    <div class="print-row"><b>Tipo de Cliente</b><span>${it.tipoCliente==='counter'?'Counter':it.tipoCliente==='corporativa'?'Corporativo':'-'}</span></div>
     <div class="print-row"><b>Canal</b><span>${it.canal==='whatsapp'?'WhatsApp':it.canal==='correo'?'Correo':it.canal==='telefono'?'Telefono':'Personal'}</span></div>
     <div class="print-row"><b>Descripcion</b><span>${it.descripcion||'-'}</span></div>
     <div class="print-row"><b>Monto</b><span>${it.monto ? formatMoney(it.monto) : '-'}</span></div>
@@ -2427,7 +2439,8 @@ function refreshClientesList(){
 }
 
 function toggleFechaPagoVisible(){
-  document.getElementById('field-fecha-pago-line').style.display = document.getElementById('f-pago-contado').checked ? '' : 'none';
+  const pagadoVisible = document.getElementById('field-pago-contado-line').style.display !== 'none';
+  document.getElementById('field-fecha-pago-line').style.display = (pagadoVisible && document.getElementById('f-pago-contado').checked) ? '' : 'none';
 }
 function restaurarLayoutFechasNormal(){
   const fechaRecepcionDiv = document.getElementById('field-fecha-recepcion');
@@ -2460,15 +2473,14 @@ function openModal(prefillId){
     document.getElementById('f-limite').value = it.fechaLimite||'';
     document.getElementById('f-fecha-entrega').value = it.fechaCerrado||'';
     document.getElementById('f-tiene-oc').checked = it.tieneOC;
-    document.getElementById('field-facturado-line').style.display = 'flex';
     document.getElementById('f-facturado').checked = !!it.facturado;
     document.getElementById('f-facturado-fecha').textContent = it.fechaFacturado ? ('Desde '+fmtDate(it.fechaFacturado)) : '';
     document.getElementById('f-pago-contado').checked = !!it.pagoContado;
     document.getElementById('f-pago-contado-fecha').textContent = it.fechaPagoContado ? ('Desde '+fmtDate(it.fechaPagoContado)) : '';
     document.getElementById('f-fecha-pago').value = it.fechaPagoContado||'';
-    toggleFechaPagoVisible();
     document.getElementById('f-pendiente-pago').checked = !!it.pendientePago;
     document.getElementById('f-pendiente-pago-fecha').textContent = it.fechaPendientePago ? ('Desde '+fmtDate(it.fechaPendientePago)) : '';
+    actualizarCamposPorTipoCliente();
     document.getElementById('f-numero-oc').value = it.numeroOC||'';
     document.getElementById('f-numero-oc').disabled = !it.tieneOC;
     document.getElementById('f-notas').value = it.notas||'';
@@ -2499,10 +2511,6 @@ function openModal(prefillId){
     }
     document.getElementById('field-fecha-entrega-row').style.display = esCotizacion ? 'none' : '';
     document.getElementById('field-limite-line').style.display = esCotizacion ? 'none' : '';
-    document.getElementById('field-tiene-oc-line').style.display = esCotizacion ? 'none' : '';
-    document.getElementById('field-pago-contado-line').style.display = esCotizacion ? 'none' : '';
-    document.getElementById('field-fecha-pago-line').style.display = 'none';
-    document.getElementById('field-pendiente-pago-line').style.display = esCotizacion ? 'none' : '';
     ['f-cliente','f-descripcion','f-limite','f-numero-oc','f-notas','f-monto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-origen').value = 'cotizacion';
     document.getElementById('f-tipo-counter').checked = false;
@@ -2512,15 +2520,14 @@ function openModal(prefillId){
     document.getElementById('f-fecha').value = todayStr();
     document.getElementById('f-fecha-entrega').value = '';
     document.getElementById('f-tiene-oc').checked = false;
-    document.getElementById('field-facturado-line').style.display = 'none';
     document.getElementById('f-facturado').checked = false;
     document.getElementById('f-facturado-fecha').textContent = '';
     document.getElementById('f-pago-contado').checked = false;
     document.getElementById('f-pago-contado-fecha').textContent = '';
     document.getElementById('f-fecha-pago').value = '';
-    document.getElementById('field-fecha-pago-line').style.display = 'none';
     document.getElementById('f-pendiente-pago').checked = false;
     document.getElementById('f-pendiente-pago-fecha').textContent = '';
+    actualizarCamposPorTipoCliente();
     document.getElementById('f-numero-oc').disabled = true;
     catSel.value = 'Offset';
     buildCategoriaSelect('Offset');
@@ -2544,7 +2551,7 @@ function saveModal(){
   const cliente = document.getElementById('f-cliente').value.trim().toUpperCase();
   if(!cliente){ showAlert('Escribe el nombre del cliente.'); return; }
   const tipoClienteVal = resolvedTipoCliente();
-  if(!editingId && !tipoClienteVal){ showAlert('Selecciona el Tipo de Cliente: Counter o Corporativa.'); return; }
+  if(!editingId && !tipoClienteVal){ showAlert('Selecciona el Tipo de Cliente: Counter o Corporativo.'); return; }
   const origen = document.getElementById('f-origen').value;
   const montoVal = document.getElementById('f-monto').value;
   const base = {
@@ -3172,7 +3179,7 @@ function renderResumenDiario(){
     ${drilldownDiarioHtml}
     <div class="resumen-stats" style="grid-template-columns:1fr 1fr; margin-top:10px;">
       <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCounter)}</span><span class="lbl">Counter</span></div>
-      <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativa)}</span><span class="lbl">Corporativa</span></div>
+      <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativa)}</span><span class="lbl">Corporativo</span></div>
     </div>
     <div style="font-weight:800; color:var(--purple); margin:18px 0 8px; font-size:13px;">Bitacora de hoy</div>
     ${eventos.length ? eventos.map(e=>`
@@ -3280,7 +3287,7 @@ function renderResumen(){
     </div>
     <div class="resumen-stats" style="grid-template-columns:1fr 1fr; margin-top:10px;">
       <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCounterSem)}</span><span class="lbl">Counter</span></div>
-      <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativaSem)}</span><span class="lbl">Corporativa</span></div>
+      <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativaSem)}</span><span class="lbl">Corporativo</span></div>
     </div>
   `;
 }

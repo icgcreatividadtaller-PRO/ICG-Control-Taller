@@ -746,6 +746,20 @@
   </div>
 </div>
 
+<div class="overlay" id="overlay-respaldo-reminder">
+  <div class="modal" style="max-width:440px; margin-top:12vh; border-top:5px solid var(--purple);">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <span style="font-size:22px;">&#128190;</span>
+      <h2 style="margin:0;">Descarga un respaldo</h2>
+    </div>
+    <p id="respaldo-reminder-msg" style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:4px 0 18px;"></p>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn-ghost" onclick="closeRespaldoReminder()">Mas tarde</button>
+      <button class="btn-primary" style="margin-left:0;" onclick="descargarRespaldoDesdeReminder()">Descargar ahora</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay-op-gestionar-lista">
   <div class="modal" style="max-width:420px; margin-top:10vh;">
     <h2 id="gestion-lista-titulo" style="margin-bottom:14px;">Editar lista</h2>
@@ -965,6 +979,7 @@ async function storageSet(key, value){
 // de Firestore apenas se acumulan varias decenas de proyectos con fotos adjuntas.
 const ITEMS_COLLECTION = 'taller_items';
 let lastSyncedItemDocs = {}; // id -> JSON.stringify(item), el ultimo estado que sabemos sincronizado con Firestore
+let offlineFallbackActivo = false; // true cuando estamos mostrando datos viejos de localStorage por fallo de red: bloquea guardados para no sobrescribir la nube con datos obsoletos
 let itemsWritePending = false; // true mientras un writeItemsBatch() esta en vuelo
 
 async function loadItemsFromCollection(){
@@ -1079,10 +1094,13 @@ function watchItemsRealtime(){
         syncedMap[docSnap.id] = JSON.stringify(data);
       });
       const incoming = JSON.stringify(nuevosItems);
-      if(incoming === JSON.stringify(items)) return;
+      const veniaDeFallback = offlineFallbackActivo;
+      offlineFallbackActivo = false;
+      lastSyncedItemDocs = syncedMap;
+      if(veniaDeFallback) setStorageBanner(false);
+      if(!veniaDeFallback && incoming === JSON.stringify(items)) return;
       try{
         items = nuevosItems;
-        lastSyncedItemDocs = syncedMap;
         localStorage.setItem('taller_taller-items', incoming);
         migrarNombresDeEstado();
         render();
@@ -1215,12 +1233,20 @@ async function loadItems(){
       if(myGeneration !== loadGeneration) return; // el usuario ya guardo datos mas recientes (p.ej. restauro un respaldo); no pisar eso con un fallo de carga obsoleto
       items = [];
       const raw = localStorage.getItem('taller_taller-items');
-      if(raw){ try{ items = JSON.parse(raw); }catch(e2){ /* respaldo local corrupto, seguimos con items vacio */ } }
-      setStorageBanner(true, 'No se pudo cargar ni el guardado de Claude ni el guardado local de este navegador, tras varios intentos. Descarga un respaldo apenas puedas registrar algo, para no perderlo.');
+      if(raw){
+        try{ items = JSON.parse(raw); }catch(e2){ /* respaldo local corrupto, seguimos con items vacio */ }
+      }
+      offlineFallbackActivo = true;
+      if(items.length){
+        setStorageBanner(true, 'Sin conexion con la nube: estas viendo una copia local que puede estar desactualizada. Los cambios NO se van a guardar hasta reconectar, para no arriesgar sobrescribir datos mas nuevos. Descarga un respaldo apenas puedas registrar algo, para no perderlo.');
+      } else {
+        setStorageBanner(true, 'No se pudo cargar ni el guardado de Claude ni el guardado local de este navegador, tras varios intentos. Los cambios NO se van a guardar hasta reconectar. Descarga un respaldo apenas puedas registrar algo, para no perderlo.');
+      }
     }
   }
   if(myGeneration !== loadGeneration) return; // esta carga quedo obsoleta: alguien guardo datos mas nuevos mientras estaba en curso
   if(cargado){
+    offlineFallbackActivo = false;
     items = nuevoItems;
     lastSyncedItemDocs = nuevoSyncedMap;
     localStorage.setItem('taller_taller-items', JSON.stringify(items));
@@ -1237,6 +1263,8 @@ async function loadItems(){
   showApp();
   render();
   checkOpReminderDiario();
+  purgarPapeleraVencida();
+  checkRecordatorioRespaldo();
 }
 async function saveMetas(){
   try{ await storageSet('taller-metas', JSON.stringify({min:META_MIN, max:META_MAX})); }
@@ -1371,8 +1399,12 @@ function handleCategoriaChange(sel){
 }
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function saveItems(){
-  loadGeneration++; // invalida cualquier loadItems() en curso: este guardado ya es el dato mas reciente
   localStorage.setItem('taller_taller-items', JSON.stringify(items));
+  if(offlineFallbackActivo){
+    setStorageBanner(true, 'Sin conexion real con la nube: este cambio se guardo solo en este navegador y NO se sincronizo, para no arriesgar sobrescribir datos mas nuevos. Reconecta y este cambio se sincronizara solo. Descarga un respaldo si no quieres arriesgarte.');
+    return;
+  }
+  loadGeneration++; // invalida cualquier loadItems() en curso: este guardado ya es el dato mas reciente
   for(let intento=1; intento<=3; intento++){
     try{
       const resultado = await writeItemsBatch(items);
@@ -1418,6 +1450,7 @@ function exportBackup(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  localStorage.setItem('icg_ultimo_respaldo_fecha', todayStr());
 }
 function handleImportFile(ev){
   const file = ev.target.files[0];
@@ -1917,7 +1950,7 @@ function opTieneContenido(op){
 }
 function corporativosSinOP(){
   return items.filter(it=>
-    !it.archivado &&
+    !it.archivado && !it.papelera &&
     it.tipoCliente==='corporativa' &&
     opDisponible(it) &&
     !it.opNoAplica &&
@@ -1945,6 +1978,27 @@ function closeOpReminder(){
 function irAOrdenesDesdeReminder(){
   closeOpReminder();
   setView('ordenes');
+}
+function checkRecordatorioRespaldo(){
+  const UMBRAL_DIAS = 7;
+  const hoy = todayStr();
+  if(localStorage.getItem('icg_respaldo_reminder_visto') === hoy) return;
+  const ultimoRespaldo = localStorage.getItem('icg_ultimo_respaldo_fecha');
+  const dias = ultimoRespaldo ? daysSince(ultimoRespaldo) : Infinity;
+  if(dias < UMBRAL_DIAS) return;
+  const msg = ultimoRespaldo
+    ? `Ya pasaron ${dias} dias desde tu ultimo respaldo. Descarga uno ahora, toma dos segundos y te protege si algo falla.`
+    : 'No tienes ningun respaldo descargado todavia. Descarga uno ahora, toma dos segundos y te protege si algo falla.';
+  document.getElementById('respaldo-reminder-msg').textContent = msg;
+  document.getElementById('overlay-respaldo-reminder').classList.add('open');
+  localStorage.setItem('icg_respaldo_reminder_visto', hoy);
+}
+function closeRespaldoReminder(){
+  document.getElementById('overlay-respaldo-reminder').classList.remove('open');
+}
+function descargarRespaldoDesdeReminder(){
+  exportBackup();
+  closeRespaldoReminder();
 }
 function opCardHtml(it){
   const op = it.ordenProduccion;
@@ -2637,11 +2691,35 @@ function saveModal(){
 
 async function deleteFromModal(){
   if(!editingId) return;
-  if(!(await showConfirm('Eliminar esta ficha? No se puede deshacer.'))) return;
-  items = items.filter(i=>i.id!==editingId);
+  if(!(await showConfirm('Este proyecto se movera a la Papelera y se eliminara para siempre en 30 dias. Puedes restaurarlo antes de eso desde Archivo. ¿Confirmas?'))) return;
+  const it = items.find(i=>i.id===editingId);
+  if(it){ it.papelera = true; it.fechaEliminado = todayStr(); }
   saveItems();
   closeModal();
   render();
+}
+function restaurarDePapelera(id, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  it.papelera = false;
+  it.fechaEliminado = null;
+  saveItems();
+  render();
+}
+async function eliminarDefinitivoDePapelera(id, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  if(!(await showConfirm(`Vas a eliminar "${it.cliente}" para siempre, antes de que se cumplan los 30 dias. No se puede deshacer. ¿Confirmas?`))) return;
+  items = items.filter(i=>i.id!==id);
+  saveItems();
+  render();
+}
+function purgarPapeleraVencida(){
+  const antes = items.length;
+  items = items.filter(it=>!(it.papelera && it.fechaEliminado && daysSince(it.fechaEliminado) >= 30));
+  if(items.length !== antes) saveItems();
 }
 
 function cyclePrioridad(id, ev){
@@ -3029,22 +3107,46 @@ function archiveRowHtml(it){
         <button class="icon-btn" onclick="openModal('${it.id}')">Ver</button>
       </div>`;
 }
+function papeleraRowHtml(it){
+  const dias = daysSince(it.fechaEliminado);
+  const restantes = Math.max(0, 30 - dias);
+  return `
+      <div class="archive-row">
+        <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+        <span class="cat-tag">${it.categoria||'-'}</span>
+        <b>${it.cliente}</b>
+        <span class="archive-desc">${it.descripcion||''}</span>
+        <span class="archive-date" style="color:var(--magenta); font-weight:700;">Se elimina en ${restantes}d</span>
+        <button class="icon-btn" onclick="restaurarDePapelera('${it.id}', event)">&#8617; Restaurar</button>
+        <button class="icon-btn" onclick="eliminarDefinitivoDePapelera('${it.id}', event)">&#10005; Eliminar ya</button>
+      </div>`;
+}
 let archiveSubView = 'todo';
 function setArchiveSubView(v){ archiveSubView = v; render(); }
 function renderArchive(lista){
-  const totalArchivados = items.filter(it=>it.archivado).length;
-  const closed = lista.filter(it=>it.archivado);
+  const totalArchivados = items.filter(it=>it.archivado && !it.papelera).length;
+  const closed = lista.filter(it=>it.archivado && !it.papelera);
   const noAprobados = closed.filter(it=>it.estado===ESTADO_RECHAZADO);
+  const enPapelera = lista.filter(it=>it.papelera);
 
   const subtabsHtml = `<div class="subtabs">
     <button class="subtab ${archiveSubView==='todo'?'active':''}" onclick="setArchiveSubView('todo')">Todo (${closed.length})</button>
     <button class="subtab ${archiveSubView==='noaprobados'?'active':''}" onclick="setArchiveSubView('noaprobados')">No Aprobados (${noAprobados.length})</button>
+    <button class="subtab ${archiveSubView==='papelera'?'active':''}" onclick="setArchiveSubView('papelera')">&#128465; Papelera (${enPapelera.length})</button>
   </div>`;
 
+  if(archiveSubView==='papelera'){
+    if(!enPapelera.length){
+      return subtabsHtml + '<div class="empty-state"><div class="big">La papelera esta vacia</div>Lo que elimines desde la ficha de un proyecto aparece aqui, y se borra para siempre a los 30 dias.</div>';
+    }
+    const ordenados = [...enPapelera].sort((a,b)=>(b.fechaEliminado||'').localeCompare(a.fechaEliminado||''));
+    return subtabsHtml + `<div class="group-block"><div class="group-table-wrap">${ordenados.map(it=>papeleraRowHtml(it)).join('')}</div></div>`;
+  }
+
   if(!closed.length){
-    return totalArchivados === 0
+    return subtabsHtml + (totalArchivados === 0
       ? '<div class="empty-state"><div class="big">Aun no hay nada archivado</div>Los proyectos que archives manualmente apareceran aqui.</div>'
-      : '<div class="empty-state"><div class="big">Nada archivado coincide con estos filtros</div></div>';
+      : '<div class="empty-state"><div class="big">Nada archivado coincide con estos filtros</div></div>');
   }
 
   if(archiveSubView==='noaprobados'){
@@ -3302,16 +3404,16 @@ function render(){
   const filtCategoria = document.getElementById('filter-categoria').value;
   const filtTipo = document.getElementById('filter-tipo').value;
   const searched = items.filter(it=>matchesSearch(it,q) && matchesFilter(it,filtOrigen) && matchesCategoria(it,filtCategoria) && matchesTipo(it,filtTipo));
-  const active = searched.filter(it=>!it.archivado);
-  const allActiveSorted = sortActive(items.filter(it=>!it.archivado));
+  const active = searched.filter(it=>!it.archivado && !it.papelera);
+  const allActiveSorted = sortActive(items.filter(it=>!it.archivado && !it.papelera));
   const orderMap = new Map(allActiveSorted.map((it,i)=>[it.id, i+1]));
 
-  document.getElementById('count-activos').textContent = items.filter(i=>!i.archivado && !ESTADOS_COTIZACION.includes(i.estado)).length;
-  document.getElementById('count-cotizaciones').textContent = items.filter(i=>!i.archivado && i.origen==='cotizacion' && ESTADOS_COTIZACION.includes(i.estado)).length;
-  document.getElementById('count-archivo').textContent = items.filter(i=>i.archivado).length;
-  document.getElementById('count-ordenes').textContent = items.filter(i=>!i.archivado && opDisponible(i) && !(i.opNoAplica && !opTieneContenido(i.ordenProduccion))).length;
+  document.getElementById('count-activos').textContent = items.filter(i=>!i.archivado && !i.papelera && !ESTADOS_COTIZACION.includes(i.estado)).length;
+  document.getElementById('count-cotizaciones').textContent = items.filter(i=>!i.archivado && !i.papelera && i.origen==='cotizacion' && ESTADOS_COTIZACION.includes(i.estado)).length;
+  document.getElementById('count-archivo').textContent = items.filter(i=>i.archivado && !i.papelera).length;
+  document.getElementById('count-ordenes').textContent = items.filter(i=>!i.archivado && !i.papelera && opDisponible(i) && !(i.opNoAplica && !opTieneContenido(i.ordenProduccion))).length;
   const panoramaIds = new Set();
-  items.filter(it=>!it.archivado).forEach(it=>{
+  items.filter(it=>!it.archivado && !it.papelera).forEach(it=>{
     if(getAlert(it)==='atencion') panoramaIds.add(it.id);
     if(isCriticalAlert(it)) panoramaIds.add(it.id);
     if(it.pausado) panoramaIds.add(it.id);

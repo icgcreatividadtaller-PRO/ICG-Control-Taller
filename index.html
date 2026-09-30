@@ -244,15 +244,6 @@
   .hist-row:last-child{border-bottom:none;}
   .hist-time{color:var(--ink-3); font-weight:700; font-size:11px;}
 
-  .adj-row{display:flex; align-items:center; gap:10px; padding:9px 10px; background:var(--neutral-bg); border-radius:8px; margin-bottom:7px; cursor:pointer; transition:background .15s;}
-  .adj-row:hover{background:#E2DEEB;}
-  .adj-thumb{width:52px; height:52px; border-radius:6px; object-fit:cover; flex-shrink:0; background:#fff; border:1.5px solid var(--border-strong);}
-  .adj-icon{width:52px; height:52px; border-radius:6px; background:var(--purple); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex-shrink:0;}
-  .adj-name{flex:1; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:none;}
-  .adj-open-hint{font-size:10px; color:var(--ink-3); font-weight:600; text-transform:none;}
-  .lightbox-content{max-width:92vw; max-height:88vh; position:relative;}
-  .lightbox-content img{max-width:92vw; max-height:88vh; border-radius:8px; display:block;}
-  .lightbox-close{position:absolute; top:-44px; right:0; color:#fff; background:rgba(255,255,255,0.15); border-color:rgba(255,255,255,0.35);}
 
   .autosave-badge{
     position:fixed; bottom:18px; right:18px; z-index:40;
@@ -263,9 +254,6 @@
   }
   .autosave-badge .gear{font-size:14px; display:inline-block; animation:spinGear 2.5s linear infinite;}
   @keyframes spinGear{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
-  .adj-del{background:none; border:none; color:var(--ink-3); cursor:pointer; font-size:14px; padding:2px 8px;}
-  .adj-del:hover{color:var(--magenta);}
-  .foto-final-img{width:100%; max-height:220px; object-fit:cover; border-radius:8px; margin-bottom:6px; display:block; cursor:pointer;}
 
   #print-area{display:none;}
   @media print{
@@ -550,18 +538,6 @@
     <div class="field" id="field-historial-btn" style="display:none;">
       <button type="button" class="btn-ghost" style="width:100%;" onclick="openHistorial()">&#128337; Ver historial de cambios</button>
     </div>
-    <div class="field" id="field-adjuntos" style="display:none;">
-      <label>Adjuntos de referencia (fotos, PDF, tablas, etc.)</label>
-      <div id="adjuntos-list"></div>
-      <input type="file" id="input-adjunto" style="display:none;" onchange="handleAddAdjunto(event)">
-      <button type="button" class="btn-ghost" style="width:100%; margin-top:6px;" onclick="document.getElementById('input-adjunto').click()">&#128206; Agregar archivo</button>
-    </div>
-    <div class="field" id="field-foto-final" style="display:none;">
-      <label>Foto del proyecto terminado</label>
-      <div id="foto-final-preview"></div>
-      <input type="file" id="input-foto-final" accept="image/*" style="display:none;" onchange="handleFotoFinal(event)">
-      <button type="button" class="btn-ghost" style="width:100%; margin-top:6px;" onclick="document.getElementById('input-foto-final').click()">&#128247; Subir foto de terminado</button>
-    </div>
     <div class="field" id="field-print-btn" style="display:none;">
       <button type="button" class="btn-ghost" style="width:100%;" onclick="printFicha()">&#128424; Imprimir / Exportar PDF</button>
     </div>
@@ -662,24 +638,6 @@
     <div class="modal-actions" style="margin-top:16px;">
       <div></div>
       <button class="btn-ghost" onclick="closeHistorial()">Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="overlay-lightbox" onclick="if(event.target===this) closeLightbox()">
-  <div class="lightbox-content">
-    <button class="btn-ghost lightbox-close" onclick="closeLightbox()">Cerrar &#10005;</button>
-    <img id="lightbox-img" src="">
-  </div>
-</div>
-
-<div class="overlay" id="overlay-adjuntos-view">
-  <div class="modal" style="max-width:480px;">
-    <h2>Adjuntos del proyecto</h2>
-    <div id="adjuntos-view-body"></div>
-    <div class="modal-actions" style="margin-top:16px;">
-      <div></div>
-      <button class="btn-ghost" onclick="closeAdjuntosView()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1349,6 +1307,8 @@ function migrarNombresDeEstado(){
         if(it.fechaCerrado !== fecha){ it.fechaCerrado = fecha; cambiado = true; }
       }
     }
+    if(it.adjuntos){ delete it.adjuntos; cambiado = true; }
+    if(it.fotoFinal){ delete it.fotoFinal; cambiado = true; }
     const op = it.ordenProduccion;
     if(op && (typeof op.materiales === 'string' || !Array.isArray(op.procesos))){
       const procesosViejos = Array.isArray(op.subProcesos) ? op.subProcesos : [];
@@ -2228,32 +2188,6 @@ function desarchivarProyecto(id, ev){
   render();
 }
 
-function dataURLtoBlob(dataurl){
-  const parts = dataurl.split(',');
-  const mimeMatch = parts[0].match(/:(.*?);/);
-  const mime = mimeMatch ? mimeMatch[1] : '';
-  const bstr = atob(parts[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-  return new Blob([u8arr], {type:mime});
-}
-function viewAdjunto(dataUrl, tipo){
-  if(tipo && tipo.startsWith('image/')){
-    document.getElementById('lightbox-img').src = dataUrl;
-    document.getElementById('overlay-lightbox').classList.add('open');
-    return;
-  }
-  try{
-    const blob = dataURLtoBlob(dataUrl);
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(()=>URL.revokeObjectURL(url), 60000);
-  }catch(e){
-    window.open(dataUrl, '_blank');
-  }
-}
-function closeLightbox(){ document.getElementById('overlay-lightbox').classList.remove('open'); }
 function proyectosRezagados(){
   const UMBRAL_DIAS = 5;
   return items.filter(it=>{
@@ -2326,132 +2260,11 @@ document.addEventListener('keydown', e=>{
   }
 });
 
-function viewAdjuntoFromItem(itemId, adjId){
-  const it = items.find(i=>i.id===itemId);
-  if(!it) return;
-  const a = (it.adjuntos||[]).find(x=>x.id===adjId);
-  if(!a) return;
-  viewAdjunto(a.data, a.tipo);
-}
-function viewFotoFinal(itemId){
-  const it = items.find(i=>i.id===itemId);
-  if(!it || !it.fotoFinal) return;
-  viewAdjunto(it.fotoFinal.data, 'image/*');
-}
-function viewFotoFinalFromCard(id, ev){ ev.stopPropagation(); viewFotoFinal(id); }
-
-function adjRowHtml(itemId, a){
-  const thumb = a.tipo && a.tipo.startsWith('image/')
-    ? `<img class="adj-thumb" src="${a.data}">`
-    : `<div class="adj-icon">${(a.nombre.split('.').pop()||'?').slice(0,4).toUpperCase()}</div>`;
-  return `<div class="adj-row" onclick="viewAdjuntoFromItem('${itemId}','${a.id}')" ondblclick="viewAdjuntoFromItem('${itemId}','${a.id}')">
-    ${thumb}
-    <div style="flex:1; min-width:0;"><span class="adj-name">${a.nombre}</span><div class="adj-open-hint">Clic para abrir</div></div>
-    <button type="button" class="adj-del" onclick="event.stopPropagation(); removeAdjunto('${a.id}')">&#10005;</button>
-  </div>`;
-}
-function openAdjuntosOverlay(id, ev){
-  if(ev) ev.stopPropagation();
-  const it = items.find(i=>i.id===id);
-  if(!it) return;
-  const adjuntos = it.adjuntos || [];
-  document.getElementById('adjuntos-view-body').innerHTML = adjuntos.length
-    ? adjuntos.map(a=>adjRowHtml(id, a)).join('')
-    : '<div class="empty-state"><div class="big">Sin adjuntos</div></div>';
-  document.getElementById('overlay-adjuntos-view').classList.add('open');
-}
-function closeAdjuntosView(){ document.getElementById('overlay-adjuntos-view').classList.remove('open'); }
-
-const MAX_ADJUNTO_BYTES = 4 * 1024 * 1024;
-
-function renderAdjuntosList(){
-  if(!editingId) return;
-  const it = items.find(i=>i.id===editingId);
-  if(!it) return;
-  const adjuntos = it.adjuntos || [];
-  const box = document.getElementById('adjuntos-list');
-  box.innerHTML = adjuntos.length ? adjuntos.map(a=>adjRowHtml(editingId, a)).join('') : '<div class="adj-open-hint">Aun no hay adjuntos.</div>';
-}
-function handleAddAdjunto(ev){
-  const file = ev.target.files[0];
-  ev.target.value = '';
-  if(!file || !editingId) return;
-  if(file.size > MAX_ADJUNTO_BYTES){
-    showAlert('Ese archivo pesa mas de 4MB. Comprime la imagen o el archivo antes de adjuntarlo, para no llenar el espacio de guardado.');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const it = items.find(i=>i.id===editingId);
-    if(!it) return;
-    if(!it.adjuntos) it.adjuntos = [];
-    it.adjuntos.push({
-      id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
-      nombre: file.name,
-      tipo: file.type,
-      data: reader.result,
-      fecha: todayStr()
-    });
-    saveItems();
-    renderAdjuntosList();
-    render();
-  };
-  reader.readAsDataURL(file);
-}
-function removeAdjunto(adjId){
-  if(!editingId) return;
-  const it = items.find(i=>i.id===editingId);
-  if(!it || !it.adjuntos) return;
-  it.adjuntos = it.adjuntos.filter(a=>a.id!==adjId);
-  saveItems();
-  renderAdjuntosList();
-  render();
-}
-
-function renderFotoFinal(){
-  if(!editingId) return;
-  const it = items.find(i=>i.id===editingId);
-  if(!it) return;
-  const box = document.getElementById('foto-final-preview');
-  box.innerHTML = it.fotoFinal
-    ? `<img class="foto-final-img" src="${it.fotoFinal.data}" onclick="viewFotoFinal('${editingId}')"><button type="button" class="btn-ghost" style="width:100%; color:var(--magenta);" onclick="removeFotoFinal()">Quitar foto</button>`
-    : '';
-}
-function handleFotoFinal(ev){
-  const file = ev.target.files[0];
-  ev.target.value = '';
-  if(!file || !editingId) return;
-  if(file.size > MAX_ADJUNTO_BYTES){
-    showAlert('Esa imagen pesa mas de 4MB. Comprimela antes de subirla.');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const it = items.find(i=>i.id===editingId);
-    if(!it) return;
-    it.fotoFinal = {data: reader.result, fecha: todayStr()};
-    saveItems();
-    renderFotoFinal();
-    render();
-  };
-  reader.readAsDataURL(file);
-}
-function removeFotoFinal(){
-  if(!editingId) return;
-  const it = items.find(i=>i.id===editingId);
-  if(!it) return;
-  it.fotoFinal = null;
-  saveItems();
-  renderFotoFinal();
-  render();
-}
-
 function printFicha(){
   if(!editingId) return;
   const it = items.find(i=>i.id===editingId);
   if(!it) return;
   const hist = (it.historial||[]).map(h=>`<div class="print-hist-item">${fmtDateTime(h.ts)} &mdash; ${h.estado}</div>`).join('');
-  const adjuntosLista = (it.adjuntos||[]).map(a=>`<div class="print-hist-item">${a.nombre}</div>`).join('') || 'Ninguno';
   document.getElementById('print-area').innerHTML = `
     <div class="print-title">Ficha de proyecto &mdash; ${it.cliente}</div>
     <div class="print-row"><b>Estado actual</b><span>${it.estado}</span></div>
@@ -2469,10 +2282,8 @@ function printFicha(){
     <div class="print-row"><b>Fecha de entrega</b><span>${it.fechaCerrado ? fmtDate(it.fechaCerrado) : '-'}</span></div>
     <div class="print-row"><b>Fecha de pago</b><span>${it.fechaPagoContado ? fmtDate(it.fechaPagoContado) : '-'}</span></div>
     <div class="print-row"><b>Notas</b><span>${it.notas||'-'}</span></div>
-    <div class="print-row"><b>Adjuntos</b><span>${adjuntosLista}</span></div>
     <div style="margin-top:14px; font-weight:800; color:#3F2364;">Historial de cambios</div>
     ${hist || '<div class="print-hist-item">Sin historial</div>'}
-    ${it.fotoFinal ? `<div style="margin-top:14px; font-weight:800; color:#3F2364;">Foto de terminado</div><img class="print-img" src="${it.fotoFinal.data}">` : ''}
   `;
   window.print();
 }
@@ -2544,16 +2355,12 @@ function openModal(prefillId){
     fieldEstado.style.display = 'block';
     btnDelete.style.display = 'block';
     document.getElementById('field-historial-btn').style.display = 'block';
-    document.getElementById('field-adjuntos').style.display = 'block';
-    document.getElementById('field-foto-final').style.display = 'block';
     document.getElementById('field-print-btn').style.display = 'block';
     document.getElementById('field-op-btn').style.display = opDisponible(it) ? 'block' : 'none';
     document.getElementById('field-archivar-btn').style.display = 'block';
     document.getElementById('field-archivar-btn').innerHTML = it.archivado
       ? `<button type="button" class="btn-ghost" style="width:100%;" onclick="desarchivarProyecto('${it.id}')">&#8617; Sacar del archivo</button>`
       : `<button type="button" class="btn-ghost" style="width:100%;" onclick="archivarProyecto('${it.id}')">&#128230; Archivar proyecto</button>`;
-    renderAdjuntosList();
-    renderFotoFinal();
   } else {
     const esCotizacion = view==='cotizaciones';
     document.getElementById('modal-title').textContent = esCotizacion ? 'Nueva cotizacion' : 'Nuevo proyecto';
@@ -2588,8 +2395,6 @@ function openModal(prefillId){
     fieldEstado.style.display = 'none';
     btnDelete.style.display = 'none';
     document.getElementById('field-historial-btn').style.display = 'none';
-    document.getElementById('field-adjuntos').style.display = 'none';
-    document.getElementById('field-foto-final').style.display = 'none';
     document.getElementById('field-print-btn').style.display = 'none';
     document.getElementById('field-op-btn').style.display = 'none';
     document.getElementById('field-archivar-btn').style.display = 'none';
@@ -2847,8 +2652,6 @@ function cardHtml(it, orderNum){
         <span class="cat-tag">${it.categoria||'Sin categoria'}</span>
         ${it.monto ? `<span class="money-tag">${formatMoney(it.monto)}</span>` : ''}
         ${it.tieneOC ? '<span class="tag oc-si">Con OC</span>' : ''}
-        ${(it.adjuntos&&it.adjuntos.length) ? `<span class="tag oc-si" style="cursor:pointer;" onclick="openAdjuntosOverlay('${it.id}', event)">&#128206; ${it.adjuntos.length}</span>` : ''}
-        ${it.fotoFinal ? `<span class="tag oc-si" style="cursor:pointer;" onclick="viewFotoFinalFromCard('${it.id}', event)">&#128247;</span>` : ''}
         ${it.facturado
           ? `<span class="tag oc-si" style="cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#10003; Facturado</span>`
           : (it.estado==='Entregado' ? `<span class="tag" style="background:var(--yellow); color:var(--purple); cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#9998; Marcar facturado</span>` : '')}

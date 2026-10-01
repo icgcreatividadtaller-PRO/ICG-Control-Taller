@@ -412,6 +412,7 @@
     </div>
     <div class="sidebar-tools">
       <div class="tool-btn resumen" onclick="openResumen()"><span class="icon">&#128202;</span> Resumen semanal</div>
+      <div class="tool-btn resumen" onclick="openResumenMensual()"><span class="icon">&#128197;</span> Resumen mensual</div>
       <div class="tool-btn" onclick="openResumenDiario()"><span class="icon">&#128197;</span> Resumen diario</div>
       <div class="tool-btn" onclick="exportBackup()"><span class="icon">&#8681;</span> Descargar respaldo</div>
       <div class="tool-btn" onclick="document.getElementById('import-file').click()"><span class="icon">&#8679;</span> Restaurar respaldo</div>
@@ -573,6 +574,17 @@
     <div class="modal-actions" style="margin-top:16px;">
       <div></div>
       <button class="btn-ghost" onclick="closeResumen()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-resumen-mensual">
+  <div class="modal resumen-modal">
+    <h2>Resumen mensual</h2>
+    <div id="resumen-mensual-body"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <div></div>
+      <button class="btn-ghost" onclick="closeResumenMensual()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -836,6 +848,8 @@ let collapsedGroups = {};
 let weekOffset = 0;
 let resumenDrilldownTipo = null;
 let resumenDiarioDrilldownTipo = null;
+let monthOffset = 0;
+let resumenMensualDrilldownTipo = null;
 let listadoSort = {field:'fecha', dir:1};
 
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,''); }
@@ -1864,6 +1878,7 @@ function archivarOP(){
   const it = items.find(i=>i.id===opItemId);
   if(!it || !it.ordenProduccion) return;
   it.ordenProduccion.archivada = true;
+  it.ordenProduccion.fechaArchivada = todayStr();
   saveItems();
   closeOrdenProduccion();
   render();
@@ -1872,6 +1887,7 @@ function desarchivarOP(){
   const it = items.find(i=>i.id===opItemId);
   if(!it || !it.ordenProduccion) return;
   it.ordenProduccion.archivada = false;
+  it.ordenProduccion.fechaArchivada = null;
   saveItems();
   closeOrdenProduccion();
   render();
@@ -1881,10 +1897,12 @@ function saveOrdenProduccion(){
   if(!it) return;
   const numeroPrevio = it.ordenProduccion ? it.ordenProduccion.numero : null;
   const archivadaPrevia = it.ordenProduccion ? it.ordenProduccion.archivada : false;
+  const fechaArchivadaPrevia = it.ordenProduccion ? it.ordenProduccion.fechaArchivada : null;
   const tipoPrevio = it.ordenProduccion ? it.ordenProduccion.tipo : null;
   it.ordenProduccion = {
     numero: numeroPrevio || siguienteNumeroOP(),
     archivada: !!archivadaPrevia,
+    fechaArchivada: fechaArchivadaPrevia || null,
     tipo: opTipoActual || tipoPrevio || null,
     procesos: snapshotProcesos().filter(p=>p.aplica),
     materiales: snapshotMateriales().filter(m=>m.aplica),
@@ -3012,6 +3030,16 @@ function getWeekRange(offset){
   const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
   return {monday, sunday};
 }
+function getMonthRange(offset){
+  const today = new Date();
+  const first = new Date(today.getFullYear(), today.getMonth()+offset, 1);
+  const last = new Date(today.getFullYear(), today.getMonth()+offset+1, 0);
+  return {first, last};
+}
+function fmtMonthLabel(d){
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return `${meses[d.getMonth()]} ${d.getFullYear()}`;
+}
 function fmtShort(d){
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const dows = ['dom','lun','mar','mie','jue','vie','sab'];
@@ -3193,6 +3221,77 @@ function renderResumen(){
     <div class="resumen-stats" style="grid-template-columns:1fr 1fr; margin-top:10px;">
       <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCounterSem)}</span><span class="lbl">Counter</span></div>
       <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativaSem)}</span><span class="lbl">Corporativo</span></div>
+    </div>
+  `;
+}
+
+function openResumenMensual(){
+  monthOffset = 0;
+  resumenMensualDrilldownTipo = null;
+  document.getElementById('overlay-resumen-mensual').classList.add('open');
+  renderResumenMensual();
+}
+function closeResumenMensual(){ document.getElementById('overlay-resumen-mensual').classList.remove('open'); }
+function navMonth(delta){ monthOffset += delta; resumenMensualDrilldownTipo = null; renderResumenMensual(); }
+function toggleResumenMensualDrilldown(tipo){
+  resumenMensualDrilldownTipo = (resumenMensualDrilldownTipo === tipo) ? null : tipo;
+  renderResumenMensual();
+}
+function renderResumenMensual(){
+  const {first, last} = getMonthRange(monthOffset);
+  const firstDs = toDs(first), lastDs = toDs(last);
+  const inRange = ds => ds && ds>=firstDs && ds<=lastDs;
+
+  const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
+  const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
+  const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
+  const facturadoList = items.filter(it=>inRange(it.fechaFacturado) || inRange(it.fechaPagoContado));
+  const opCompletadasList = items.filter(it=>it.ordenProduccion && it.ordenProduccion.archivada && inRange(it.ordenProduccion.fechaArchivada));
+  const cotizados = cotizadosList.length;
+  const aprobados = aprobadosList.length;
+  const cerrados = cerradosList.length;
+  const opCompletadas = opCompletadasList.length;
+  const facturadoTotal = facturadoList.reduce((s,it)=>s+(Number(it.monto)||0),0);
+  const facturadoCounterMes = facturadoList.filter(it=>it.tipoCliente==='counter').reduce((s,it)=>s+(Number(it.monto)||0),0);
+  const facturadoCorporativaMes = facturadoList.filter(it=>it.tipoCliente==='corporativa').reduce((s,it)=>s+(Number(it.monto)||0),0);
+
+  const listas = {cotizados:cotizadosList, aprobados:aprobadosList, cerrados:cerradosList, facturado:facturadoList, ops:opCompletadasList};
+  let drilldownHtml = '';
+  if(resumenMensualDrilldownTipo && listas[resumenMensualDrilldownTipo]){
+    const lista = listas[resumenMensualDrilldownTipo];
+    const nombres = {cotizados:'Cotizados este mes', aprobados:'Aprobados este mes', cerrados:'Cerrados este mes', facturado:'Facturados este mes', ops:'Ordenes de produccion completadas este mes'};
+    drilldownHtml = `
+      <div style="margin-top:14px; border-top:1.5px dashed var(--border-strong); padding-top:12px;">
+        <div style="font-weight:800; color:var(--purple); font-size:12.5px; margin-bottom:8px;">${nombres[resumenMensualDrilldownTipo]} (${lista.length})</div>
+        ${lista.length ? lista.map(it=>`
+          <div class="archive-row" style="cursor:pointer;" onclick="closeResumenMensual(); openModal('${it.id}')">
+            <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+            <b>${it.cliente}</b>
+            <span class="archive-desc">${it.descripcion||''}</span>
+            ${it.monto ? `<span class="money-tag">${formatMoney(it.monto)}</span>` : ''}
+          </div>`).join('') : '<div class="op-card-empty">Nada aqui este mes.</div>'}
+      </div>`;
+  }
+
+  document.getElementById('resumen-mensual-body').innerHTML = `
+    <div class="resumen-week-nav">
+      <button class="btn-icon" onclick="navMonth(-1)">&#8249;</button>
+      <div class="resumen-week-label">${fmtMonthLabel(first)}</div>
+      <button class="btn-icon" onclick="navMonth(1)">&#8250;</button>
+    </div>
+    <div class="resumen-stats" style="grid-template-columns:repeat(3,1fr);">
+      <div class="resumen-stat ${resumenMensualDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotizados</span></div>
+      <div class="resumen-stat ${resumenMensualDrilldownTipo==='aprobados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('aprobados')"><span class="num">${aprobados}</span><span class="lbl">Aprobados</span></div>
+      <div class="resumen-stat ${resumenMensualDrilldownTipo==='cerrados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('cerrados')"><span class="num">${cerrados}</span><span class="lbl">Cerrados</span></div>
+    </div>
+    <div class="resumen-stats" style="grid-template-columns:1fr 1fr; margin-top:10px;">
+      <div class="resumen-stat ${resumenMensualDrilldownTipo==='facturado'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('facturado')"><span class="num" style="font-size:18px;">${formatMoney(facturadoTotal)}</span><span class="lbl">Facturado</span></div>
+      <div class="resumen-stat ${resumenMensualDrilldownTipo==='ops'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('ops')"><span class="num">${opCompletadas}</span><span class="lbl">OP Completadas</span></div>
+    </div>
+    ${drilldownHtml}
+    <div class="resumen-stats" style="grid-template-columns:1fr 1fr; margin-top:10px;">
+      <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCounterMes)}</span><span class="lbl">Counter</span></div>
+      <div class="resumen-stat"><span class="num" style="font-size:18px;">${formatMoney(facturadoCorporativaMes)}</span><span class="lbl">Corporativo</span></div>
     </div>
   `;
 }

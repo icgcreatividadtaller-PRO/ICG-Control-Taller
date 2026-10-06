@@ -543,7 +543,7 @@
       <button type="button" class="btn-ghost" style="width:100%;" onclick="printFicha()">&#128424; Imprimir / Exportar PDF</button>
     </div>
     <div class="field" id="field-op-btn" style="display:none;">
-      <button type="button" class="btn-ghost" style="width:100%;" onclick="openOrdenProduccion()">&#127981; Orden de Produccion</button>
+      <button type="button" class="btn-ghost" style="width:100%;" onclick="openOrdenProduccion()">&#127981; Orden de Producción</button>
     </div>
     <div class="field" id="field-archivar-btn" style="display:none;"></div>
     <div class="modal-actions">
@@ -591,7 +591,7 @@
 
 <div class="overlay" id="overlay-op">
   <div class="modal" style="max-width:560px;">
-    <h2 id="op-modal-titulo">Orden de Produccion</h2>
+    <h2 id="op-modal-titulo">Orden de Producción</h2>
     <div id="op-modal-subtitulo" style="margin:-12px 0 16px; font-size:12.5px; color:var(--ink-2); font-weight:700; text-transform:none;"></div>
     <div id="op-estado-botones" style="display:flex; gap:8px; margin-bottom:16px;"></div>
 
@@ -599,18 +599,23 @@
     <div id="op-progress-label" style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:16px; text-transform:none;">0 de 0 procesos completados (0%)</div>
 
     <div class="field" id="op-tipo-selector" style="display:none;">
-      <label>Area de esta orden</label>
+      <label>Área de esta orden</label>
       <div id="op-tipo-sugerido-hint" style="font-size:11.5px; color:var(--ink-2); margin-bottom:8px;"></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
         <button type="button" class="btn-tipo-op" style="background:#3F2364; color:#fff; border-color:#3F2364;" onclick="elegirTipoOP('offset')">Offset</button>
-        <button type="button" class="btn-tipo-op" style="background:#E67E22; color:#fff; border-color:#E67E22;" onclick="elegirTipoOP('rotulos')">Rotulos &amp; Senaletica</button>
-        <button type="button" class="btn-tipo-op" style="background:#2E86DE; color:#fff; border-color:#2E86DE;" onclick="elegirTipoOP('impresion')">Impresion &amp; Gran Formato</button>
-        <button type="button" class="btn-tipo-op" style="background:#16A085; color:#fff; border-color:#16A085;" onclick="elegirTipoOP('laser')">Laser</button>
+        <button type="button" class="btn-tipo-op" style="background:#E67E22; color:#fff; border-color:#E67E22;" onclick="elegirTipoOP('rotulos')">Rótulos &amp; Señalética</button>
+        <button type="button" class="btn-tipo-op" style="background:#2E86DE; color:#fff; border-color:#2E86DE;" onclick="elegirTipoOP('impresion')">Impresión &amp; Gran Formato</button>
+        <button type="button" class="btn-tipo-op" style="background:#16A085; color:#fff; border-color:#16A085;" onclick="elegirTipoOP('laser')">Láser</button>
+        <button type="button" class="btn-tipo-op" style="background:#7F8C8D; color:#fff; border-color:#7F8C8D; grid-column:1 / -1;" onclick="elegirTipoOP('otros')">Otros</button>
       </div>
     </div>
 
     <div id="op-checklist-secciones">
       <div id="op-tipo-actual-indicator" style="display:none; margin:-8px 0 10px; font-size:11.5px; color:var(--ink-2); font-weight:700; text-transform:none;"></div>
+      <div class="field" id="op-categoria-otros-field" style="display:none;">
+        <label>Especifica la categoría</label>
+        <input id="op-categoria-otros" placeholder="Ej: Sellos, Stand, Fotografía, Impresión Digital" style="text-transform:none;">
+      </div>
       <div class="field">
         <label>Procesos <button type="button" class="icon-btn" title="Editar lista de procesos" onclick="abrirGestionLista('procesos')">&#9998;</button></label>
         <div class="op-list-head"><span>Proceso</span><span>Aplica</span><span>Listo</span></div>
@@ -627,11 +632,11 @@
     <div class="field"><label>Notas de materiales (cantidades, detalles)</label><textarea id="op-materiales-notas" placeholder="Ej: Vinil - 2 yardas" style="text-transform:none;"></textarea></div>
 
     <div class="grid2">
-      <div class="field"><label>Tamano / Dimensiones</label><input id="op-tamano" placeholder="Ej: 24 x 36 pulgadas" style="text-transform:none;"></div>
+      <div class="field"><label>Tamaño / Dimensiones</label><input id="op-tamano" placeholder="Ej: 24 x 36 pulgadas" style="text-transform:none;"></div>
       <div class="field"><label>Cantidad de piezas</label><input type="number" id="op-cantidad" min="0" style="text-transform:none;"></div>
     </div>
-    <div class="field"><label>Tiempo estimado</label><input id="op-tiempo" placeholder="Ej: 2 dias" style="text-transform:none;"></div>
-    <div class="field"><label>Notas tecnicas de produccion</label><textarea id="op-notas" placeholder="Instrucciones para el operario" style="text-transform:none;"></textarea></div>
+    <div class="field"><label>Tiempo estimado</label><input id="op-tiempo" placeholder="Ej: 2 días" style="text-transform:none;"></div>
+    <div class="field"><label>Notas técnicas de producción</label><textarea id="op-notas" placeholder="Instrucciones para el operario" style="text-transform:none;"></textarea></div>
     <div class="field" id="op-archivar-field"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="printOrdenProduccion()">&#128424; Imprimir OP</button>
@@ -793,27 +798,34 @@ const MATERIALES_SUGERIDOS = {
 };
 const OP_TIPOS = [
   {key:'offset', label:'Offset'},
-  {key:'rotulos', label:'Rotulos & Senaletica'},
-  {key:'impresion', label:'Impresion & Gran Formato'},
-  {key:'laser', label:'Laser'}
+  {key:'rotulos', label:'Rótulos & Señalética'},
+  {key:'impresion', label:'Impresión & Gran Formato'},
+  {key:'laser', label:'Láser'},
+  {key:'otros', label:'Otros'}
 ];
 const OP_PROCESOS_DEFAULT = {
   offset: ['Compra de materiales','Diseño','CTP','Impresión','Terminación','Numeración','Empaque','Entrega'],
   rotulos: ['Compra de materiales','Diseño','Impresión del vinil','Laminado','Rotulación','Instalación','Corte de vinil','Aplicación/Transferencia','Entrega'],
   impresion: ['Compra de materiales','Diseño','Impresión','Impresión lona','Corte','Terminación','Ojaletes','Tensando','Empaque','Entrega'],
-  laser: ['Compra de materiales','Diseño','Corte láser','Grabado','Pulido','Doblado/Formado','Ensamblaje','Empaque','Entrega']
+  laser: ['Compra de materiales','Diseño','Corte láser','Grabado','Pulido','Doblado/Formado','Ensamblaje','Empaque','Entrega'],
+  otros: ['Compra de materiales','Diseño','Producción','Entrega']
 };
 const OP_MATERIALES_DEFAULT = {
   offset: ['Bond 20','Bond 24','NCR','Cartonite','Opalina'],
   rotulos: ['Sintra','Vinil','Vinil fondo gris','Vinil one vision','Vinil transparente','Banner','Acrílico'],
   impresion: ['Banner','Vinil transparente'],
-  laser: ['Acrílico']
+  laser: ['Acrílico'],
+  otros: []
 };
 let procesosPorTipo = JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
 let materialesPorTipo = JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
 let opTipoActual = null;
 let gestionarListaModo = null;
 function tipoLabel(key){ const t = OP_TIPOS.find(t=>t.key===key); return t ? t.label : key; }
+function opTipoIndicatorHtml(tipoKey, categoriaOtros){
+  const etiqueta = (tipoKey==='otros' && categoriaOtros) ? `Otros — ${categoriaOtros}` : tipoLabel(tipoKey);
+  return `Área: <b>${etiqueta}</b> — <a href="#" onclick="cambiarTipoOP(event)" style="color:var(--purple);">cambiar</a>`;
+}
 function procesosDeTipo(tipo){ return (procesosPorTipo && procesosPorTipo[tipo]) ? procesosPorTipo[tipo] : (OP_PROCESOS_DEFAULT[tipo]||[]); }
 function materialesDeTipo(tipo){ return (materialesPorTipo && materialesPorTipo[tipo]) ? materialesPorTipo[tipo] : (OP_MATERIALES_DEFAULT[tipo]||[]); }
 function sugerirTipoPorCategoria(categoria){
@@ -1742,8 +1754,8 @@ function openOrdenProduccion(id){
   opTipoActual = op.tipo || null;
 
   const numeroPreview = op.numero || siguienteNumeroOP();
-  document.getElementById('op-modal-titulo').textContent = `Orden de Produccion #${String(numeroPreview).padStart(3,'0')}`;
-  document.getElementById('op-modal-subtitulo').textContent = `${it.cliente} — ${it.descripcion||'Sin descripcion'}`;
+  document.getElementById('op-modal-titulo').textContent = `Orden de Producción #${String(numeroPreview).padStart(3,'0')}`;
+  document.getElementById('op-modal-subtitulo').textContent = `${it.cliente} — ${it.descripcion||'Sin descripción'}`;
   renderOpEstadoBotones(it);
   const archBtn = document.getElementById('op-archivar-field');
   archBtn.innerHTML = op.archivada
@@ -1755,8 +1767,9 @@ function openOrdenProduccion(id){
   if(usaSistemaNuevo && !opTipoActual){
     document.getElementById('op-tipo-selector').style.display = '';
     document.getElementById('op-checklist-secciones').style.display = 'none';
+    document.getElementById('op-categoria-otros-field').style.display = 'none';
     const sugerido = sugerirTipoPorCategoria(it.categoria);
-    document.getElementById('op-tipo-sugerido-hint').textContent = sugerido ? `Sugerido segun la categoria del proyecto: ${tipoLabel(sugerido)}` : '';
+    document.getElementById('op-tipo-sugerido-hint').textContent = sugerido ? `Sugerido según la categoría del proyecto: ${tipoLabel(sugerido)}` : '';
     document.getElementById('op-procesos-list').innerHTML = '';
     document.getElementById('op-materiales-list').innerHTML = '';
   } else if(usaSistemaNuevo && opTipoActual){
@@ -1764,7 +1777,10 @@ function openOrdenProduccion(id){
     document.getElementById('op-checklist-secciones').style.display = '';
     const indicator = document.getElementById('op-tipo-actual-indicator');
     indicator.style.display = '';
-    indicator.innerHTML = `Area: <b>${tipoLabel(opTipoActual)}</b> — <a href="#" onclick="cambiarTipoOP(event)" style="color:var(--purple);">cambiar</a>`;
+    indicator.innerHTML = opTipoIndicatorHtml(opTipoActual, op.categoriaOtros);
+    const otrosField = document.getElementById('op-categoria-otros-field');
+    otrosField.style.display = opTipoActual==='otros' ? '' : 'none';
+    document.getElementById('op-categoria-otros').value = op.categoriaOtros || '';
     const listaProcesos = procesosDeTipo(opTipoActual).map(nombre=>{
       const existente = procesosGuardados.find(p=>p.nombre===nombre);
       return existente || {nombre, aplica:false, completado:false};
@@ -1779,6 +1795,7 @@ function openOrdenProduccion(id){
     document.getElementById('op-tipo-selector').style.display = 'none';
     document.getElementById('op-checklist-secciones').style.display = '';
     document.getElementById('op-tipo-actual-indicator').style.display = 'none';
+    document.getElementById('op-categoria-otros-field').style.display = 'none';
     const sugeridosProc = PROCESOS_SUGERIDOS[it.categoria] || [];
     const sugeridosMat = MATERIALES_SUGERIDOS[it.categoria] || [];
     const listaProcesos = allProcesos().map(nombre=>{
@@ -1811,7 +1828,10 @@ function elegirTipoOP(tipoKey){
   document.getElementById('op-checklist-secciones').style.display = '';
   const indicator = document.getElementById('op-tipo-actual-indicator');
   indicator.style.display = '';
-  indicator.innerHTML = `Area: <b>${tipoLabel(tipoKey)}</b> — <a href="#" onclick="cambiarTipoOP(event)" style="color:var(--purple);">cambiar</a>`;
+  indicator.innerHTML = opTipoIndicatorHtml(tipoKey, null);
+  const otrosField = document.getElementById('op-categoria-otros-field');
+  otrosField.style.display = tipoKey==='otros' ? '' : 'none';
+  document.getElementById('op-categoria-otros').value = '';
   const listaProcesos = procesosDeTipo(tipoKey).map(nombre=>({nombre, aplica:false, completado:false}));
   const listaMateriales = materialesDeTipo(tipoKey).map(nombre=>({nombre, aplica:false}));
   renderProcesosList(listaProcesos);
@@ -1822,14 +1842,15 @@ async function cambiarTipoOP(ev){
   const progreso = opProgresoLive();
   const materialesMarcados = document.querySelectorAll('.op-mat-aplica:checked').length;
   if(progreso.total>0 || materialesMarcados>0){
-    if(!(await showConfirm('Cambiar de area borra las casillas marcadas en el checklist actual (sin guardar). ¿Continuar?'))) return;
+    if(!(await showConfirm('Cambiar de área borra las casillas marcadas en el checklist actual (sin guardar). ¿Continuar?'))) return;
   }
   opTipoActual = null;
   document.getElementById('op-checklist-secciones').style.display = 'none';
+  document.getElementById('op-categoria-otros-field').style.display = 'none';
   document.getElementById('op-tipo-selector').style.display = '';
   const it = items.find(i=>i.id===opItemId);
   const sugerido = it ? sugerirTipoPorCategoria(it.categoria) : null;
-  document.getElementById('op-tipo-sugerido-hint').textContent = sugerido ? `Sugerido segun la categoria del proyecto: ${tipoLabel(sugerido)}` : '';
+  document.getElementById('op-tipo-sugerido-hint').textContent = sugerido ? `Sugerido según la categoría del proyecto: ${tipoLabel(sugerido)}` : '';
 }
 function refrescarChecklistTipoActual(){
   if(!opTipoActual) return;
@@ -1839,7 +1860,7 @@ function refrescarChecklistTipoActual(){
   renderMaterialesList(materialesDeTipo(opTipoActual).map(nombre=>actualesMat.find(m=>m.nombre===nombre) || {nombre, aplica:false}));
 }
 function abrirGestionLista(modo){
-  if(!opTipoActual){ showAlert('Elige primero el area de esta orden.'); return; }
+  if(!opTipoActual){ showAlert('Elige primero el área de esta orden.'); return; }
   gestionarListaModo = modo;
   renderGestionLista();
   document.getElementById('overlay-op-gestionar-lista').classList.add('open');
@@ -1899,11 +1920,17 @@ function saveOrdenProduccion(){
   const archivadaPrevia = it.ordenProduccion ? it.ordenProduccion.archivada : false;
   const fechaArchivadaPrevia = it.ordenProduccion ? it.ordenProduccion.fechaArchivada : null;
   const tipoPrevio = it.ordenProduccion ? it.ordenProduccion.tipo : null;
+  const tipoFinal = opTipoActual || tipoPrevio || null;
+  const categoriaOtrosPrevia = it.ordenProduccion ? it.ordenProduccion.categoriaOtros : '';
+  const categoriaOtros = tipoFinal==='otros'
+    ? document.getElementById('op-categoria-otros').value.trim()
+    : (tipoFinal ? '' : (categoriaOtrosPrevia || ''));
   it.ordenProduccion = {
     numero: numeroPrevio || siguienteNumeroOP(),
     archivada: !!archivadaPrevia,
     fechaArchivada: fechaArchivadaPrevia || null,
-    tipo: opTipoActual || tipoPrevio || null,
+    tipo: tipoFinal,
+    categoriaOtros: categoriaOtros,
     procesos: snapshotProcesos().filter(p=>p.aplica),
     materiales: snapshotMateriales().filter(m=>m.aplica),
     materialesNotas: document.getElementById('op-materiales-notas').value.trim(),
@@ -1990,6 +2017,7 @@ function opCardHtml(it){
         <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
         ${op && op.numero ? `<span class="cat-tag">OP #${String(op.numero).padStart(3,'0')}</span>` : ''}
         <span class="cat-tag">${it.categoria||'-'}</span>
+        ${op && op.tipo ? `<span class="cat-tag">${op.tipo==='otros' && op.categoriaOtros ? 'Otros — '+op.categoriaOtros : tipoLabel(op.tipo)}</span>` : ''}
       </div>
       <div class="op-card-client">${it.cliente}</div>
       ${it.descripcion ? `<div class="op-card-desc">${it.descripcion}</div>` : ''}
@@ -1998,8 +2026,8 @@ function opCardHtml(it){
         <div class="op-card-detail">${completados} de ${total} procesos completados (${pct}%)</div>
         <div class="op-card-procesos">${procesosNombres.length ? procesosNombres.map(p=>`<span class="tag oc-si">${p}</span>`).join('') : '<span class="dash">Sin procesos marcados</span>'}</div>
         ${materialesNombres.length ? `<div class="op-card-detail"><b>Materiales:</b> ${materialesNombres.join(', ')}</div>` : ''}
-        <div class="op-card-detail"><b>Tamano:</b> ${op.tamano||'-'} &nbsp; <b>Cant:</b> ${op.cantidad||'-'}</div>
-      ` : '<div class="op-card-empty">Sin orden de produccion todavia</div>'}
+        <div class="op-card-detail"><b>Tamaño:</b> ${op.tamano||'-'} &nbsp; <b>Cant:</b> ${op.cantidad||'-'}</div>
+      ` : '<div class="op-card-empty">Sin orden de producción todavía</div>'}
       <div class="op-card-actions">
         <button class="btn-ghost" style="flex:1;" onclick="openOrdenProduccion('${it.id}')">${tieneOP?'Editar OP':'Crear OP'}</button>
         ${!tieneOP ? `<button class="btn-ghost" onclick="marcarOpNoAplica('${it.id}', event)">N/A</button>` : ''}
@@ -2046,20 +2074,23 @@ function printOrdenProduccion(){
   const procesos = snapshotProcesos().filter(p=>p.aplica);
   const materiales = snapshotMateriales().filter(m=>m.aplica).map(m=>m.nombre);
   const procesosHtml = procesos.length ? procesos.map(p=>`<div class="print-hist-item">[${p.completado?'X':' '}] ${p.nombre}</div>`).join('') : 'Ninguno especificado';
+  const categoriaOtrosVal = document.getElementById('op-categoria-otros') ? document.getElementById('op-categoria-otros').value.trim() : '';
+  const areaLabel = opTipoActual ? ((opTipoActual==='otros' && categoriaOtrosVal) ? `Otros — ${categoriaOtrosVal}` : tipoLabel(opTipoActual)) : '';
   document.getElementById('print-area').innerHTML = `
-    <div class="print-title">Orden de Produccion &mdash; ${it.cliente}</div>
+    <div class="print-title">Orden de Producción &mdash; ${it.cliente}</div>
     <div class="print-row"><b>Proyecto</b><span>${it.descripcion||'-'}</span></div>
-    <div class="print-row"><b>Categoria</b><span>${it.categoria||'-'}</span></div>
+    <div class="print-row"><b>Categoría</b><span>${it.categoria||'-'}</span></div>
+    ${areaLabel ? `<div class="print-row"><b>Área</b><span>${areaLabel}</span></div>` : ''}
     <div class="print-row"><b>Materiales</b><span>${materiales.join(', ')||'-'}</span></div>
     <div class="print-row"><b>Notas de materiales</b><span>${document.getElementById('op-materiales-notas').value||'-'}</span></div>
-    <div class="print-row"><b>Tamano / Dimensiones</b><span>${document.getElementById('op-tamano').value||'-'}</span></div>
+    <div class="print-row"><b>Tamaño / Dimensiones</b><span>${document.getElementById('op-tamano').value||'-'}</span></div>
     <div class="print-row"><b>Cantidad de piezas</b><span>${document.getElementById('op-cantidad').value||'-'}</span></div>
     <div class="print-row"><b>Tiempo estimado</b><span>${document.getElementById('op-tiempo').value||'-'}</span></div>
-    <div class="print-row"><b>Notas tecnicas</b><span>${document.getElementById('op-notas').value||'-'}</span></div>
+    <div class="print-row"><b>Notas técnicas</b><span>${document.getElementById('op-notas').value||'-'}</span></div>
     <div style="margin-top:14px; font-weight:800; color:#3F2364;">Procesos</div>
     ${procesosHtml}
     <div class="print-row" style="margin-top:14px;"><b>Prioridad</b><span>${it.prioridad||'Sin prioridad'}</span></div>
-    <div class="print-row"><b>Fecha limite</b><span>${it.fechaLimite ? fmtDate(it.fechaLimite) : '-'}</span></div>
+    <div class="print-row"><b>Fecha límite</b><span>${it.fechaLimite ? fmtDate(it.fechaLimite) : '-'}</span></div>
   `;
   window.print();
 }

@@ -186,7 +186,10 @@
   .archive-row{display:flex; align-items:center; gap:14px; background:var(--card); border:1.5px solid var(--border); border-radius:8px; padding:11px 15px; margin-bottom:7px; font-size:12.5px;}
   .op-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px;}
   .op-card{background:var(--card); border:1.5px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:7px;}
-  .op-card{min-width:0;}
+  .op-card{min-width:0; position:relative;}
+  .op-card-num{position:absolute; top:10px; right:14px; font-size:30px; font-weight:800; line-height:1; color:var(--purple); letter-spacing:-0.02em;}
+  .op-card-num small{font-size:13px; font-weight:800; margin-right:2px; color:var(--ink-3);}
+  .op-card-head{padding-right:84px;}
   .op-card-head{display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0;}
   .op-card-head-row{display:flex; flex-wrap:wrap; align-items:center; gap:6px; max-width:100%;}
   .op-card-head-row .cat-tag{white-space:normal; overflow-wrap:anywhere;}
@@ -2043,10 +2046,10 @@ function opCardHtml(it){
   const materialesNombres = (op && Array.isArray(op.materiales)) ? op.materiales.map(m=>m.nombre) : [];
   return `
     <div class="op-card">
+      ${op && op.numero ? `<div class="op-card-num"><small>#</small>${String(op.numero).padStart(3,'0')}</div>` : ''}
       <div class="op-card-head">
         <div class="op-card-head-row">
           <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
-          ${op && op.numero ? `<span class="cat-tag" style="white-space:nowrap;">OP #${String(op.numero).padStart(3,'0')}</span>` : ''}
           ${it.archivado ? '<span class="cat-tag" style="white-space:nowrap;">Proyecto archivado</span>' : ''}
         </div>
         <div class="op-card-head-row">
@@ -2134,7 +2137,12 @@ function renderOrdenes(base){
     lista = [...sinOP, ...activas];
     if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">No hay ordenes de produccion todavia</div>Entra a la ficha de un proyecto en produccion y crea su Orden ahi, o marca N/A si no aplica.</div>';
   }
-  const ordenados = sortActive(lista);
+  const numOP = it => (it.ordenProduccion && it.ordenProduccion.numero) ? Number(it.ordenProduccion.numero) : Infinity;
+  const ordenados = [...lista].sort((a,b)=>{
+    const na = numOP(a), nb = numOP(b);
+    if(na !== nb) return na===Infinity ? 1 : nb===Infinity ? -1 : na-nb;
+    return sortActive([a,b])[0]===a ? -1 : 1;
+  });
   return subtabsHtml + `<div class="op-grid">${ordenados.map(it=>opCardHtml(it)).join('')}</div>`;
 }
 function printOrdenProduccion(){

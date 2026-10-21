@@ -756,11 +756,12 @@ const ESTADOS_COTIZACION = ['Pendiente de cotizar','Cotizado'];
 const PHASES = [
   { name:'Por Iniciar', key:'pendiente', estados:['Pendiente','Aprobado'] },
   { name:'En curso', key:'encurso', estados:['En proceso','En proceso de diseño','En producción'] },
-  { name:'Completado', key:'completado', estados:['Completado','Listo para entrega','Entregado'] }
+  { name:'Completado', key:'completado', estados:['Completado','Listo para entrega','Entregado','Pendiente de pago'] }
 ];
 const ESTADO_RECHAZADO = 'No aprobado';
 const ALL_ESTADOS = ['Pendiente', ...ESTADOS_COTIZACION, ...PHASES.flatMap(p=>p.estados).filter(e=>e!=='Pendiente'), ESTADO_RECHAZADO];
-const CERRADOS = ['Entregado'];
+const ESTADO_PENDIENTE_PAGO = 'Pendiente de pago';
+const CERRADOS = ['Entregado', ESTADO_PENDIENTE_PAGO];
 const CATEGORIAS_BASE = ['Offset','Digital','Acrílico','Rótulo','Rotulación','Pintura','Pandereta','Stickers','Láser','Fotografía','Vinil Cortado'];
 let categoriasExtra = [];
 
@@ -1319,7 +1320,8 @@ function migrarNombresDeEstado(){
       it.historial.forEach(h=>{ if(h.estado === 'Esperando artes'){ h.estado = 'En proceso de diseño'; cambiado = true; } });
       const ultimoCotizado = [...it.historial].reverse().find(h=>h.estado==='Cotizado');
       const ultimoAprobado = [...it.historial].reverse().find(h=>h.estado==='Aprobado');
-      const ultimoEntregado = [...it.historial].reverse().find(h=>CERRADOS.includes(h.estado));
+      let ultimoEntregado = null; let _prevCerrado = false;
+      it.historial.forEach(h=>{ const c = CERRADOS.includes(h.estado); if(c && !_prevCerrado) ultimoEntregado = h; _prevCerrado = c; });
       if(ultimoCotizado){
         const fecha = toDs(new Date(ultimoCotizado.ts));
         if(it.fechaCotizado !== fecha){ it.fechaCotizado = fecha; cambiado = true; }
@@ -1333,6 +1335,7 @@ function migrarNombresDeEstado(){
         if(it.fechaCerrado !== fecha){ it.fechaCerrado = fecha; cambiado = true; }
       }
     }
+    if(it.pendientePago && it.estado==='Entregado'){ it.estado = ESTADO_PENDIENTE_PAGO; cambiado = true; }
     if(it.adjuntos){ delete it.adjuntos; cambiado = true; }
     if(it.fotoFinal){ delete it.fotoFinal; cambiado = true; }
     const op = it.ordenProduccion;
@@ -1534,7 +1537,7 @@ function handleOrigenChange(){
 }
 function nextEstadoFor(it){
   if(it.estado === ESTADO_RECHAZADO) return null;
-  const opts = estadoOptions(it.origen).filter(e=>e!==ESTADO_RECHAZADO);
+  const opts = estadoOptions(it.origen).filter(e=>e!==ESTADO_RECHAZADO && e!==ESTADO_PENDIENTE_PAGO);
   const idx = opts.indexOf(it.estado);
   if(idx===-1 || idx===opts.length-1) return null;
   return opts[idx+1];
@@ -1545,6 +1548,15 @@ async function rechazarProyecto(id, ev){
   if(!it) return;
   if(!(await showConfirm('Marcar este proyecto como No aprobado?'))) return;
   applyEstadoTransition(it, ESTADO_RECHAZADO);
+  saveItems(); render();
+}
+function marcarPagadoDesdeCard(id, ev){
+  ev.stopPropagation();
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  applyEstadoTransition(it, 'Entregado');
+  it.pagoContado = true;
+  it.fechaPagoContado = todayStr();
   saveItems(); render();
 }
 function advanceCard(id, ev){
@@ -1565,10 +1577,17 @@ function applyEstadoTransition(it, nuevoEstado){
     it.historial.push({estado: nuevoEstado, ts: new Date().toISOString()});
     if(nuevoEstado==='Cotizado') it.fechaCotizado = todayStr();
     if(nuevoEstado==='Aprobado') it.fechaAprobado = todayStr();
-    if(CERRADOS.includes(nuevoEstado)) it.fechaCerrado = todayStr();
+    if(CERRADOS.includes(nuevoEstado) && !CERRADOS.includes(prev)) it.fechaCerrado = todayStr();
     if(it.pausado){ it.pausado = false; }
   }
   it.estado = nuevoEstado;
+  if(nuevoEstado === ESTADO_PENDIENTE_PAGO){
+    it.pendientePago = true;
+    if(!it.fechaPendientePago) it.fechaPendientePago = todayStr();
+    it.pagoContado = false; it.fechaPagoContado = null;
+  } else if(prev === ESTADO_PENDIENTE_PAGO){
+    it.pendientePago = false; it.fechaPendientePago = null;
+  }
 }
 function fmtDateTime(iso){
   if(!iso) return '-';
@@ -1649,7 +1668,7 @@ function refreshArchivarOPDisabled(){
   if(!btn) return;
   const it = items.find(i=>i.id===opItemId);
   const progreso = opProgresoLive();
-  const habilitado = it && it.estado==='Entregado' && progreso.completo;
+  const habilitado = it && CERRADOS.includes(it.estado) && progreso.completo;
   btn.disabled = !habilitado;
   btn.title = habilitado ? '' : 'Solo se puede archivar cuando el proyecto esta Entregado y todos los procesos estan al 100%';
 }
@@ -1673,7 +1692,7 @@ async function archivarOPConValidacion(){
   const it = items.find(i=>i.id===opItemId);
   if(!it || !it.ordenProduccion) return;
   const progreso = opProgresoLive();
-  if(it.estado !== 'Entregado'){
+  if(!CERRADOS.includes(it.estado)){
     showAlert('Esta orden solo se puede archivar cuando el proyecto ya este en estado Entregado.');
     return;
   }
@@ -2190,9 +2209,9 @@ function renderPanorama(activos){
   const atrasados = activos.filter(isCriticalAlert);
   const corpSinOP = activos.filter(it=>it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion));
   const todosPausados = activos.filter(it=>it.pausado);
-  const faltaFacturar = activos.filter(it=>it.estado==='Entregado' && it.tipoCliente==='corporativa' && !it.facturado);
+  const faltaFacturar = activos.filter(it=>CERRADOS.includes(it.estado) && it.tipoCliente==='corporativa' && !it.facturado);
   const pendientesCotizar = activos.filter(it=>it.estado==='Pendiente de cotizar');
-  const pendientesPago = activos.filter(it=>it.pendientePago);
+  const pendientesPago = activos.filter(it=>it.pendientePago || it.estado===ESTADO_PENDIENTE_PAGO);
 
   const sortByDias = list => [...list].sort((a,b)=>daysSince(b.fechaRecibido)-daysSince(a.fechaRecibido));
 
@@ -2488,6 +2507,11 @@ function saveModal(){
     if(pagoContadoNuevo && pendientePagoNuevo){
       if(!it.pagoContado){ pendientePagoNuevo = false; } else { pagoContadoNuevo = false; }
     }
+    // Pendiente de pago es un estado: la casilla y el estado se mantienen sincronizados
+    let estadoPreferido = nuevoEstadoElegido;
+    if(prevEstado===ESTADO_PENDIENTE_PAGO && nuevoEstadoElegido===ESTADO_PENDIENTE_PAGO && !pendientePagoNuevo) estadoPreferido = 'Entregado';
+    else if(pendientePagoNuevo && !pagoContadoNuevo && !it.pendientePago) estadoPreferido = ESTADO_PENDIENTE_PAGO;
+    if(pagoContadoNuevo && estadoPreferido===ESTADO_PENDIENTE_PAGO) estadoPreferido = 'Entregado';
     Object.assign(it, base);
 
     if(facturadoNuevo && !it.facturado){ it.fechaFacturado = todayStr(); }
@@ -2500,12 +2524,8 @@ function saveModal(){
     if(!pagoContadoNuevo){ it.fechaPagoContado = null; }
     it.pagoContado = pagoContadoNuevo;
 
-    if(pendientePagoNuevo && !it.pendientePago){ it.fechaPendientePago = todayStr(); }
-    if(!pendientePagoNuevo){ it.fechaPendientePago = null; }
-    it.pendientePago = pendientePagoNuevo;
-
-    let finalEstado = nuevoEstadoElegido;
-    if(nuevoEstadoElegido === prevEstado && origen==='cotizacion'){
+    let finalEstado = estadoPreferido;
+    if(nuevoEstadoElegido === prevEstado && estadoPreferido === prevEstado && origen==='cotizacion'){
       const ocNueva = !prevTieneOC && base.tieneOC;
       if(ocNueva && ['Pendiente','Pendiente de cotizar','Cotizado'].includes(prevEstado)) finalEstado = 'Aprobado';
     }
@@ -2513,15 +2533,17 @@ function saveModal(){
       finalEstado = 'En proceso';
     }
     applyEstadoTransition(it, finalEstado);
+    if(!pendientePagoNuevo && finalEstado!==ESTADO_PENDIENTE_PAGO){ it.pendientePago = false; it.fechaPendientePago = null; }
     const fechaEntregaManual = document.getElementById('f-fecha-entrega').value;
     if(fechaEntregaManual) it.fechaCerrado = fechaEntregaManual;
   } else {
-    const estadoInicial = origen==='cotizacion' ? 'Pendiente de cotizar' : 'Pendiente';
+    let estadoInicial = origen==='cotizacion' ? 'Pendiente de cotizar' : 'Pendiente';
     const facturadoInicial = document.getElementById('f-facturado').checked;
     let pagoContadoInicial = document.getElementById('f-pago-contado').checked;
     let pendientePagoInicial = document.getElementById('f-pendiente-pago').checked;
     if(pagoContadoInicial && pendientePagoInicial){ pendientePagoInicial = false; }
-    const fechaEntregaInicial = document.getElementById('f-fecha-entrega').value || null;
+    if(pendientePagoInicial){ estadoInicial = ESTADO_PENDIENTE_PAGO; }
+    const fechaEntregaInicial = document.getElementById('f-fecha-entrega').value || (pendientePagoInicial ? todayStr() : null);
     const fechaPagoInicial = document.getElementById('f-fecha-pago').value || null;
     items.push(Object.assign({}, base, {
       id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
@@ -2703,14 +2725,14 @@ function cardHtml(it, orderNum){
         ${it.tieneOC ? '<span class="tag oc-si">Con OC</span>' : ''}
         ${it.facturado
           ? `<span class="tag oc-si" style="cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#10003; Facturado</span>`
-          : (it.estado==='Entregado' ? `<span class="tag" style="background:var(--yellow); color:var(--purple); cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#9998; Marcar facturado</span>` : '')}
+          : ((CERRADOS.includes(it.estado) && it.tipoCliente==='corporativa') ? `<span class="tag" style="background:var(--yellow); color:var(--purple); cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#9998; Marcar facturado</span>` : '')}
       </div>
       <div class="card-meta">${dias}d en fila${it.fechaLimite ? ' - limite '+it.fechaLimite : ''}${metaWarn}</div>
       ${it.pausado ? `<div class="tag" style="background:var(--neutral-bg); color:var(--ink-2); width:100%; text-align:center; padding:6px 0; margin-top:6px; font-size:11px;">${pausaIcon(it)} ${pausaLabel(it)} desde ${fmtDate(it.fechaPausado)}</div>` : ''}
       ${isCriticalAlert(it) ? '<div class="blink-badge">&#9888; ATRASADO</div>' : ''}
       ${it.pausado
         ? `<button class="advance-btn" onclick="reanudarProyecto('${it.id}', event)">&#9654; Reanudar</button>`
-        : (next ? `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${next} &#9656;</button>` : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
+        : (it.estado===ESTADO_PENDIENTE_PAGO ? `<button class="advance-btn" onclick="marcarPagadoDesdeCard('${it.id}', event)">&#10003; Marcar pagado</button><button class="advance-btn" style="margin-top:6px;" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>` : next ? `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${next} &#9656;</button>` : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
       ${(!it.pausado && puedePausar(it)) ? `<button class="reject-btn" style="border-color:var(--ink-3); color:var(--ink-2);" onclick="pausarProyecto('${it.id}', event)">${pausaIcon(it)} ${pausaAccionLabel(it)}</button>` : ''}
       ${it.estado==='Cotizado' ? `<button class="reject-btn" onclick="rechazarProyecto('${it.id}', event)">&#10005; No aprobado</button>` : ''}
     </div>
@@ -2842,7 +2864,7 @@ function rowHtml(it, orderNum){
       <td>${it.tieneOC ? `<span class="tag oc-si">${it.numeroOC ? '#'+it.numeroOC : 'Con OC'}</span>` : '<span class="dash">-</span>'}</td>
       <td>${it.facturado
         ? `<span class="tag oc-si" style="cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#10003; Facturado</span>`
-        : (it.estado==='Entregado' ? `<span class="tag" style="background:var(--yellow); color:var(--purple); cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#9998; Marcar</span>` : '<span class="dash">-</span>')}</td>
+        : ((CERRADOS.includes(it.estado) && it.tipoCliente==='corporativa') ? `<span class="tag" style="background:var(--yellow); color:var(--purple); cursor:pointer;" onclick="toggleFacturado('${it.id}', event)">&#9998; Marcar</span>` : '<span class="dash">-</span>')}</td>
     </tr>`;
 }
 
@@ -3351,9 +3373,9 @@ function render(){
     if(isCriticalAlert(it)) panoramaIds.add(it.id);
     if(it.pausado) panoramaIds.add(it.id);
     if(it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion)) panoramaIds.add(it.id);
-    if(it.estado==='Entregado' && it.tipoCliente==='corporativa' && !it.facturado) panoramaIds.add(it.id);
+    if(CERRADOS.includes(it.estado) && it.tipoCliente==='corporativa' && !it.facturado) panoramaIds.add(it.id);
     if(it.estado==='Pendiente de cotizar') panoramaIds.add(it.id);
-    if(it.pendientePago) panoramaIds.add(it.id);
+    if(it.pendientePago || it.estado===ESTADO_PENDIENTE_PAGO) panoramaIds.add(it.id);
   });
   document.getElementById('count-panorama').textContent = panoramaIds.size;
   document.getElementById('count-listado').textContent = items.length;

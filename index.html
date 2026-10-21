@@ -1674,9 +1674,9 @@ function refreshArchivarOPDisabled(){
   if(!btn) return;
   const it = items.find(i=>i.id===opItemId);
   const progreso = opProgresoLive();
-  const habilitado = it && CERRADOS.includes(it.estado) && progreso.completo;
+  const habilitado = it && progreso.completo;
   btn.disabled = !habilitado;
-  btn.title = habilitado ? '' : 'Solo se puede archivar cuando el proyecto esta Entregado y todos los procesos estan al 100%';
+  btn.title = habilitado ? '' : 'Solo se puede archivar cuando todos los procesos estan al 100%';
 }
 function renderOpEstadoBotones(it){
   const estados = ['Completado','Listo para entrega','Entregado'];
@@ -1698,15 +1698,11 @@ async function archivarOPConValidacion(){
   const it = items.find(i=>i.id===opItemId);
   if(!it || !it.ordenProduccion) return;
   const progreso = opProgresoLive();
-  if(!CERRADOS.includes(it.estado)){
-    showAlert('Esta orden solo se puede archivar cuando el proyecto ya este en estado Entregado.');
-    return;
-  }
   if(!progreso.completo){
     showAlert(`Faltan procesos por completar (${progreso.completados} de ${progreso.total}). No puedes archivar la orden hasta que esten al 100%.`);
     return;
   }
-  if(!(await showConfirm(`Vas a archivar la OP de "${it.cliente}". Pasara a la pestana "Ordenes Completadas". ¿Confirmas?`))) return;
+  if(!(await showConfirm(`Vas a archivar la OP de "${it.cliente}". Pasara a la pestana "Archivadas" para limpiar la lista de Completadas. ¿Confirmas?`))) return;
   archivarOP();
 }
 function snapshotProcesos(){
@@ -1926,6 +1922,7 @@ function archivarOP(){
   if(!it || !it.ordenProduccion) return;
   it.ordenProduccion.archivada = true;
   it.ordenProduccion.fechaArchivada = todayStr();
+  if(!it.ordenProduccion.fechaCompletada) it.ordenProduccion.fechaCompletada = todayStr();
   saveItems();
   closeOrdenProduccion();
   render();
@@ -1945,6 +1942,7 @@ function saveOrdenProduccion(){
   const numeroPrevio = it.ordenProduccion ? it.ordenProduccion.numero : null;
   const archivadaPrevia = it.ordenProduccion ? it.ordenProduccion.archivada : false;
   const fechaArchivadaPrevia = it.ordenProduccion ? it.ordenProduccion.fechaArchivada : null;
+  const fechaCompletadaPrevia = it.ordenProduccion ? it.ordenProduccion.fechaCompletada : null;
   const tipoPrevio = it.ordenProduccion ? it.ordenProduccion.tipo : null;
   const tipoFinal = opTipoActual || tipoPrevio || null;
   const categoriaOtrosPrevia = it.ordenProduccion ? it.ordenProduccion.categoriaOtros : '';
@@ -1955,6 +1953,7 @@ function saveOrdenProduccion(){
     numero: numeroPrevio || siguienteNumeroOP(),
     archivada: !!archivadaPrevia,
     fechaArchivada: fechaArchivadaPrevia || null,
+    fechaCompletada: null,
     tipo: tipoFinal,
     categoriaOtros: categoriaOtros,
     procesos: snapshotProcesos().filter(p=>p.aplica),
@@ -1966,6 +1965,10 @@ function saveOrdenProduccion(){
     fechaEntrega: document.getElementById('op-fecha-entrega').value || null,
     notas: document.getElementById('op-notas').value.trim()
   };
+  const _op = it.ordenProduccion;
+  if(opAl100(_op)){
+    _op.fechaCompletada = fechaCompletadaPrevia || todayStr();
+  }
   saveItems();
   closeOrdenProduccion();
   render();
@@ -2044,6 +2047,7 @@ function opCardHtml(it){
         <div class="op-card-head-row">
           <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
           ${op && op.numero ? `<span class="cat-tag" style="white-space:nowrap;">OP #${String(op.numero).padStart(3,'0')}</span>` : ''}
+          ${it.archivado ? '<span class="cat-tag" style="white-space:nowrap;">Proyecto archivado</span>' : ''}
         </div>
         <div class="op-card-head-row">
           <span class="cat-tag">${it.categoria||'-'}</span>
@@ -2077,22 +2081,55 @@ function marcarOpNoAplica(id, ev){
 }
 let ordenesSubView = 'activas';
 function setOrdenesSubView(v){ ordenesSubView = v; render(); }
-function renderOrdenes(active){
-  const elegibles = active.filter(it=>opDisponible(it) && !(it.opNoAplica && !opTieneContenido(it.ordenProduccion)));
+// Las ordenes de produccion viven en su propia area, independiente de si el proyecto esta archivado.
+// Una orden con contenido siempre se muestra (aunque su proyecto este archivado); un proyecto sin orden
+// solo aparece como pendiente si sigue activo.
+function ordenesElegibles(lista){
+  return lista.filter(it=>{
+    if(it.papelera) return false;
+    if(opTieneContenido(it.ordenProduccion)) return true;
+    return !it.archivado && opDisponible(it) && !it.opNoAplica;
+  });
+}
+// Una orden esta completada cuando todos sus procesos estan al 100% (pasa sola a "Completadas").
+// "Archivar OP" solo la saca de Completadas hacia Archivadas, para limpiar la lista.
+function opAl100(op){
+  const pr = opProgress(op);
+  return pr.total>0 && pr.completados===pr.total;
+}
+function opEstaArchivada(it){ return !!(it.ordenProduccion && it.ordenProduccion.archivada); }
+function opEstaCompletada(it){
+  return !!(it.ordenProduccion && (it.ordenProduccion.archivada || it.archivado || opAl100(it.ordenProduccion)));
+}
+function opFechaCompletada(it){
+  const op = it.ordenProduccion;
+  if(!op) return null;
+  if(op.fechaCompletada) return op.fechaCompletada;
+  if(op.fechaArchivada) return op.fechaArchivada;
+  if(opEstaCompletada(it)) return it.fechaCerrado || it.fechaUltimoCambio || null;
+  return null;
+}
+function renderOrdenes(base){
+  const elegibles = ordenesElegibles(base);
   const conOP = elegibles.filter(it=>opTieneContenido(it.ordenProduccion));
-  const activas = conOP.filter(it=>!it.ordenProduccion.archivada);
-  const completadas = conOP.filter(it=>it.ordenProduccion.archivada);
+  const archivadas = conOP.filter(it=>opEstaArchivada(it));
+  const completadas = conOP.filter(it=>!opEstaArchivada(it) && opEstaCompletada(it));
+  const activas = conOP.filter(it=>!opEstaCompletada(it));
   const sinOP = elegibles.filter(it=>!opTieneContenido(it.ordenProduccion));
 
   const subtabsHtml = `<div class="subtabs">
     <button class="subtab ${ordenesSubView==='activas'?'active':''}" onclick="setOrdenesSubView('activas')">Ordenes activas (${activas.length + sinOP.length})</button>
     <button class="subtab ${ordenesSubView==='completadas'?'active':''}" onclick="setOrdenesSubView('completadas')">Ordenes Completadas (${completadas.length})</button>
+    <button class="subtab ${ordenesSubView==='archivadas'?'active':''}" onclick="setOrdenesSubView('archivadas')">&#128230; Archivadas (${archivadas.length})</button>
   </div>`;
 
   let lista;
   if(ordenesSubView==='completadas'){
     lista = completadas;
-    if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">Aun no has completado ninguna orden</div>Marca una orden como completada desde su tarjeta cuando termines la produccion.</div>';
+    if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">Aun no hay ordenes completadas</div>Una orden pasa aqui sola cuando todos sus procesos llegan al 100%.</div>';
+  } else if(ordenesSubView==='archivadas'){
+    lista = archivadas;
+    if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">Aun no hay ordenes archivadas</div>Usa Archivar OP en una orden completada para limpiar la lista de Completadas.</div>';
   } else {
     lista = [...sinOP, ...activas];
     if(!lista.length) return subtabsHtml + '<div class="empty-state"><div class="big">No hay ordenes de produccion todavia</div>Entra a la ficha de un proyecto en produccion y crea su Orden ahi, o marca N/A si no aplica.</div>';
@@ -3313,7 +3350,7 @@ function renderResumenMensual(){
   const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
   const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
   const facturadoList = items.filter(it=>inRange(it.fechaFacturado) || inRange(it.fechaPagoContado));
-  const opCompletadasList = items.filter(it=>it.ordenProduccion && it.ordenProduccion.archivada && inRange(it.ordenProduccion.fechaArchivada));
+  const opCompletadasList = items.filter(it=>!it.papelera && opTieneContenido(it.ordenProduccion) && opEstaCompletada(it) && inRange(opFechaCompletada(it)));
   const cotizados = cotizadosList.length;
   const aprobados = aprobadosList.length;
   const cerrados = cerradosList.length;
@@ -3380,7 +3417,7 @@ function render(){
   document.getElementById('count-activos').textContent = items.filter(i=>!i.archivado && !i.papelera && !ESTADOS_COTIZACION.includes(i.estado)).length;
   document.getElementById('count-cotizaciones').textContent = items.filter(i=>!i.archivado && !i.papelera && i.origen==='cotizacion' && ESTADOS_COTIZACION.includes(i.estado)).length;
   document.getElementById('count-archivo').textContent = items.filter(i=>i.archivado && !i.papelera).length;
-  document.getElementById('count-ordenes').textContent = items.filter(i=>!i.archivado && !i.papelera && opDisponible(i) && !(i.opNoAplica && !opTieneContenido(i.ordenProduccion))).length;
+  document.getElementById('count-ordenes').textContent = ordenesElegibles(items).length;
   const panoramaIds = new Set();
   items.filter(it=>!it.archivado && !it.papelera).forEach(it=>{
     if(getAlert(it)==='atencion') panoramaIds.add(it.id);
@@ -3419,7 +3456,7 @@ function render(){
       content.innerHTML = renderCalendar(active);
     } else if(view==='ordenes'){
       subtabsHolder.innerHTML = '';
-      content.innerHTML = renderOrdenes(active);
+      content.innerHTML = renderOrdenes(searched);
     } else if(view==='panorama'){
       subtabsHolder.innerHTML = '';
       content.innerHTML = renderPanorama(active);

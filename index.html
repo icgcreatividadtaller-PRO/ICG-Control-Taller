@@ -186,7 +186,10 @@
   .archive-row{display:flex; align-items:center; gap:14px; background:var(--card); border:1.5px solid var(--border); border-radius:8px; padding:11px 15px; margin-bottom:7px; font-size:12.5px;}
   .op-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px;}
   .op-card{background:var(--card); border:1.5px solid var(--border); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:7px;}
-  .op-card-head{display:flex; justify-content:space-between; align-items:center;}
+  .op-card{min-width:0;}
+  .op-card-head{display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0;}
+  .op-card-head-row{display:flex; flex-wrap:wrap; align-items:center; gap:6px; max-width:100%;}
+  .op-card-head-row .cat-tag{white-space:normal; overflow-wrap:anywhere;}
   .op-card-client{font-weight:800; font-size:14px;}
   .op-card-desc{color:var(--ink-2); font-size:11.5px; font-weight:500; margin-top:-4px;}
   .op-card-procesos{display:flex; gap:5px; flex-wrap:wrap;}
@@ -635,7 +638,10 @@
       <div class="field"><label>Tamaño / Dimensiones</label><input id="op-tamano" placeholder="Ej: 24 x 36 pulgadas" style="text-transform:none;"></div>
       <div class="field"><label>Cantidad de piezas</label><input type="number" id="op-cantidad" min="0" style="text-transform:none;"></div>
     </div>
-    <div class="field"><label>Tiempo estimado</label><input id="op-tiempo" placeholder="Ej: 2 días" style="text-transform:none;"></div>
+    <div class="grid2">
+      <div class="field"><label>Tiempo estimado</label><input id="op-tiempo" placeholder="Ej: 2 días" style="text-transform:none;"></div>
+      <div class="field"><label>Fecha de entrega</label><input type="date" id="op-fecha-entrega" style="text-transform:none;"></div>
+    </div>
     <div class="field"><label>Notas técnicas de producción</label><textarea id="op-notas" placeholder="Instrucciones para el operario" style="text-transform:none;"></textarea></div>
     <div class="field" id="op-archivar-field"></div>
     <div class="modal-actions">
@@ -1837,7 +1843,8 @@ function openOrdenProduccion(id){
   document.getElementById('op-tamano').value = op.tamano || '';
   document.getElementById('op-cantidad').value = op.cantidad || '';
   document.getElementById('op-tiempo').value = op.tiempoEstimado || '';
-  document.getElementById('op-notas').value = op.notas || '';
+  document.getElementById('op-fecha-entrega').value = (op.fechaEntrega !== undefined && op.fechaEntrega !== null) ? op.fechaEntrega : (it.fechaLimite || '');
+  document.getElementById('op-notas').value = (op.notas !== undefined && op.notas !== null) ? op.notas : (it.notas || '');
   document.getElementById('overlay-op').classList.add('open');
 }
 function closeOrdenProduccion(){ document.getElementById('overlay-op').classList.remove('open'); }
@@ -1956,6 +1963,7 @@ function saveOrdenProduccion(){
     tamano: document.getElementById('op-tamano').value.trim(),
     cantidad: document.getElementById('op-cantidad').value,
     tiempoEstimado: document.getElementById('op-tiempo').value.trim(),
+    fechaEntrega: document.getElementById('op-fecha-entrega').value || null,
     notas: document.getElementById('op-notas').value.trim()
   };
   saveItems();
@@ -2033,10 +2041,14 @@ function opCardHtml(it){
   return `
     <div class="op-card">
       <div class="op-card-head">
-        <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
-        ${op && op.numero ? `<span class="cat-tag">OP #${String(op.numero).padStart(3,'0')}</span>` : ''}
-        <span class="cat-tag">${it.categoria||'-'}</span>
-        ${op && op.tipo ? `<span class="cat-tag">${op.tipo==='otros' && op.categoriaOtros ? 'Otros — '+op.categoriaOtros : tipoLabel(op.tipo)}</span>` : ''}
+        <div class="op-card-head-row">
+          <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+          ${op && op.numero ? `<span class="cat-tag" style="white-space:nowrap;">OP #${String(op.numero).padStart(3,'0')}</span>` : ''}
+        </div>
+        <div class="op-card-head-row">
+          <span class="cat-tag">${it.categoria||'-'}</span>
+          ${op && op.tipo ? `<span class="cat-tag">${op.tipo==='otros' && op.categoriaOtros ? 'Otros — '+op.categoriaOtros : tipoLabel(op.tipo)}</span>` : ''}
+        </div>
       </div>
       <div class="op-card-client">${it.cliente}</div>
       ${it.descripcion ? `<div class="op-card-desc">${it.descripcion}</div>` : ''}
@@ -2046,6 +2058,7 @@ function opCardHtml(it){
         <div class="op-card-procesos">${procesosNombres.length ? procesosNombres.map(p=>`<span class="tag oc-si">${p}</span>`).join('') : '<span class="dash">Sin procesos marcados</span>'}</div>
         ${materialesNombres.length ? `<div class="op-card-detail"><b>Materiales:</b> ${materialesNombres.join(', ')}</div>` : ''}
         <div class="op-card-detail"><b>Tamaño:</b> ${op.tamano||'-'} &nbsp; <b>Cant:</b> ${op.cantidad||'-'}</div>
+        <div class="op-card-detail"><b>Entrega:</b> ${op.fechaEntrega ? fmtDate(op.fechaEntrega) : '-'}</div>
       ` : '<div class="op-card-empty">Sin orden de producción todavía</div>'}
       <div class="op-card-actions">
         <button class="btn-ghost" style="flex:1;" onclick="openOrdenProduccion('${it.id}')">${tieneOP?'Editar OP':'Crear OP'}</button>
@@ -2105,6 +2118,7 @@ function printOrdenProduccion(){
     <div class="print-row"><b>Tamaño / Dimensiones</b><span>${document.getElementById('op-tamano').value||'-'}</span></div>
     <div class="print-row"><b>Cantidad de piezas</b><span>${document.getElementById('op-cantidad').value||'-'}</span></div>
     <div class="print-row"><b>Tiempo estimado</b><span>${document.getElementById('op-tiempo').value||'-'}</span></div>
+    <div class="print-row"><b>Fecha de entrega</b><span>${document.getElementById('op-fecha-entrega').value ? fmtDate(document.getElementById('op-fecha-entrega').value) : '-'}</span></div>
     <div class="print-row"><b>Notas técnicas</b><span>${document.getElementById('op-notas').value||'-'}</span></div>
     <div style="margin-top:14px; font-weight:800; color:#3F2364;">Procesos</div>
     ${procesosHtml}

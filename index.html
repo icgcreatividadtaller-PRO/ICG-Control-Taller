@@ -508,7 +508,8 @@
     <div class="field"><label>Monto del proyecto ($)</label><input type="text" inputmode="decimal" id="f-monto" placeholder="0.00" oninput="maskMontoInput(this)" style="text-transform:none;"></div>
     <div class="grid2">
       <div id="field-fecha-recepcion-home" style="display:none;"></div>
-      <div class="field" id="field-fecha-recepcion"><label>Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
+      <div class="field" id="field-fecha-recepcion"><label id="lbl-fecha-recepcion">Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
+      <div class="field" id="field-fecha-envio" style="display:none;"><label>Fecha de envio</label><input type="date" id="f-fecha-envio" style="text-transform:none;"></div>
       <div class="field" id="field-limite-line"><label>Fecha limite</label><input type="date" id="f-limite" style="text-transform:none;"></div>
     </div>
     <div class="grid2" id="field-fecha-entrega-row">
@@ -761,7 +762,16 @@
 <div class="autosave-badge"><span class="gear">&#9881;</span> Autoguardado</div>
 
 <script>
-const ESTADOS_COTIZACION = ['Pendiente de cotizar','Cotizado'];
+const ESTADOS_COTIZACION = ['Por cotizar','Enviada'];
+const ESTADOS_COTIZACION_VIEJOS = { 'Pendiente de cotizar':'Por cotizar', 'Cotizado':'Enviada' };
+// En una cotizacion los estados van en femenino (Enviada, Aprobada, No aprobada); el valor guardado no cambia
+function estadoTxt(e, it){
+  if(it && (ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO)){
+    if(e==='Aprobado') return 'Aprobada';
+    if(e===ESTADO_RECHAZADO) return 'No aprobada';
+  }
+  return e;
+}
 const PHASES = [
   { name:'Por Iniciar', key:'pendiente', estados:['Pendiente','Aprobado'] },
   { name:'En curso', key:'encurso', estados:['En proceso','En proceso de diseño','En producción'] },
@@ -1290,6 +1300,14 @@ function editarMetas(){
 function migrarNombresDeEstado(){
   let cambiado = false;
   items.forEach(it=>{
+    if(ESTADOS_COTIZACION_VIEJOS[it.estado]){
+      if(it.estado==='Cotizado' && !it.fechaCotizado) it.fechaCotizado = it.fechaRecibido || todayStr();
+      it.estado = ESTADOS_COTIZACION_VIEJOS[it.estado];
+      cambiado = true;
+    }
+    if(it.historial){
+      it.historial.forEach(h=>{ if(ESTADOS_COTIZACION_VIEJOS[h.estado]){ h.estado = ESTADOS_COTIZACION_VIEJOS[h.estado]; cambiado = true; } });
+    }
     if(it.estado === 'En revisión'){
       it.estado = 'Completado';
       it.fechaUltimoCambio = todayStr();
@@ -1314,7 +1332,7 @@ function migrarNombresDeEstado(){
       it.historial.push({estado:'Pausado', ts:new Date().toISOString()});
       cambiado = true;
     }
-    if(it.origen==='directo' && ['Pendiente de cotizar','Cotizado','Aprobado'].includes(it.estado)){
+    if(it.origen==='directo' && ['Por cotizar','Enviada','Aprobado'].includes(it.estado)){
       it.estado = 'En proceso';
       it.fechaUltimoCambio = todayStr();
       if(!it.historial) it.historial = [];
@@ -1327,7 +1345,7 @@ function migrarNombresDeEstado(){
     }
     if(it.historial){
       it.historial.forEach(h=>{ if(h.estado === 'Esperando artes'){ h.estado = 'En proceso de diseño'; cambiado = true; } });
-      const ultimoCotizado = [...it.historial].reverse().find(h=>h.estado==='Cotizado');
+      const ultimoCotizado = it.fechaCotizado ? null : [...it.historial].reverse().find(h=>h.estado==='Enviada');
       const ultimoAprobado = [...it.historial].reverse().find(h=>h.estado==='Aprobado');
       let ultimoEntregado = null; let _prevCerrado = false;
       it.historial.forEach(h=>{ const c = CERRADOS.includes(h.estado); if(c && !_prevCerrado) ultimoEntregado = h; _prevCerrado = c; });
@@ -1497,7 +1515,7 @@ function handleImportFile(ev){
 }
 
 function estadoOptions(origen){
-  if(origen==='directo') return ALL_ESTADOS.filter(e=>!['Pendiente de cotizar','Cotizado','Aprobado', ESTADO_RECHAZADO].includes(e));
+  if(origen==='directo') return ALL_ESTADOS.filter(e=>!['Por cotizar','Enviada','Aprobado', ESTADO_RECHAZADO].includes(e));
   return ALL_ESTADOS.slice();
 }
 function handleTipoClienteChange(cual){
@@ -1509,12 +1527,26 @@ function handleTipoClienteChange(cual){
   }
   actualizarCamposPorTipoCliente();
 }
+// El modal se muestra en modo "cotizacion" al crear desde Cotizaciones, o al editar una cotizacion que sigue Enviada / No aprobada
+function esModalCotizacion(){
+  if(!editingId) return view==='cotizaciones';
+  const it = items.find(i=>i.id===editingId);
+  return !!(it && it.origen==='cotizacion' && (ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO));
+}
+function aplicarModoCotizacion(){
+  const esCot = esModalCotizacion();
+  document.getElementById('field-origen-line').style.display = esCot ? 'none' : '';
+  document.getElementById('field-limite-line').style.display = esCot ? 'none' : '';
+  document.getElementById('field-fecha-entrega-row').style.display = esCot ? 'none' : '';
+  document.getElementById('field-fecha-envio').style.display = esCot ? '' : 'none';
+  document.getElementById('lbl-fecha-recepcion').textContent = esCot ? 'Fecha de solicitud' : 'Fecha de recepcion';
+}
 function actualizarCamposPorTipoCliente(){
   const tipo = resolvedTipoCliente();
-  const esCotizacion = !editingId && view==='cotizaciones';
+  const esCotizacion = esModalCotizacion();
   const esCreacion = !editingId;
   document.getElementById('field-tiene-oc-line').style.display = (!esCotizacion && tipo==='corporativa') ? '' : 'none';
-  document.getElementById('field-facturado-line').style.display = (!esCreacion && tipo==='corporativa') ? 'flex' : 'none';
+  document.getElementById('field-facturado-line').style.display = (!esCotizacion && !esCreacion && tipo==='corporativa') ? 'flex' : 'none';
   const mostrarCounter = (!esCotizacion && tipo==='counter');
   document.getElementById('field-pago-contado-line').style.display = mostrarCounter ? '' : 'none';
   document.getElementById('field-pendiente-pago-line').style.display = mostrarCounter ? '' : 'none';
@@ -1555,7 +1587,7 @@ async function rechazarProyecto(id, ev){
   ev.stopPropagation();
   const it = items.find(i=>i.id===id);
   if(!it) return;
-  if(!(await showConfirm('Marcar este proyecto como No aprobado?'))) return;
+  if(!(await showConfirm(it.origen==='cotizacion' ? 'Marcar esta cotizacion como No aprobada?' : 'Marcar este proyecto como No aprobado?'))) return;
   applyEstadoTransition(it, ESTADO_RECHAZADO);
   saveItems(); render();
 }
@@ -1584,7 +1616,7 @@ function applyEstadoTransition(it, nuevoEstado){
     it.fechaUltimoCambio = todayStr();
     if(!it.historial) it.historial = [];
     it.historial.push({estado: nuevoEstado, ts: new Date().toISOString()});
-    if(nuevoEstado==='Cotizado') it.fechaCotizado = todayStr();
+    if(nuevoEstado==='Enviada') it.fechaCotizado = todayStr();
     if(nuevoEstado==='Aprobado') it.fechaAprobado = todayStr();
     if(CERRADOS.includes(nuevoEstado) && !CERRADOS.includes(prev)) it.fechaCerrado = todayStr();
     if(it.pausado){ it.pausado = false; }
@@ -2269,7 +2301,7 @@ function renderPanorama(activos){
   const corpSinOP = activos.filter(it=>it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion));
   const todosPausados = activos.filter(it=>it.pausado);
   const faltaFacturar = activos.filter(it=>CERRADOS.includes(it.estado) && it.tipoCliente==='corporativa' && !it.facturado);
-  const pendientesCotizar = activos.filter(it=>it.estado==='Pendiente de cotizar');
+  const pendientesCotizar = activos.filter(it=>it.estado==='Por cotizar');
   const pendientesPago = activos.filter(it=>it.pendientePago || it.estado===ESTADO_PENDIENTE_PAGO);
 
   const sortByDias = list => [...list].sort((a,b)=>daysSince(b.fechaRecibido)-daysSince(a.fechaRecibido));
@@ -2450,9 +2482,10 @@ function openModal(prefillId){
   const catSel = document.getElementById('f-categoria');
   if(editingId){
     const it = items.find(i=>i.id===editingId);
-    document.getElementById('modal-title').textContent = 'Editar proyecto';
-    document.getElementById('field-origen-line').style.display = '';
+    document.getElementById('modal-title').textContent = esModalCotizacion() ? 'Editar cotizacion' : 'Editar proyecto';
     restaurarLayoutFechasNormal();
+    aplicarModoCotizacion();
+    document.getElementById('f-fecha-envio').value = it.fechaCotizado||'';
     document.getElementById('f-origen').value = it.origen;
     document.getElementById('f-tipo-counter').checked = it.tipoCliente==='counter';
     document.getElementById('f-tipo-corporativa').checked = it.tipoCliente==='corporativa';
@@ -2478,7 +2511,8 @@ function openModal(prefillId){
     document.getElementById('f-notas').value = it.notas||'';
     buildCategoriaSelect(it.categoria);
     const estSel = document.getElementById('f-estado');
-    estSel.innerHTML = estadoOptions(it.origen).map(e=>`<option value="${e}" ${e===it.estado?'selected':''}>${e}</option>`).join('');
+    const opcionesEstado = esModalCotizacion() ? [...ESTADOS_COTIZACION, 'Aprobado', ESTADO_RECHAZADO] : estadoOptions(it.origen);
+    estSel.innerHTML = opcionesEstado.map(e=>`<option value="${e}" ${e===it.estado?'selected':''}>${estadoTxt(e, it)}</option>`).join('');
     fieldEstado.style.display = 'block';
     btnDelete.style.display = 'block';
     document.getElementById('field-historial-btn').style.display = 'block';
@@ -2491,14 +2525,9 @@ function openModal(prefillId){
   } else {
     const esCotizacion = view==='cotizaciones';
     document.getElementById('modal-title').textContent = esCotizacion ? 'Nueva cotizacion' : 'Nuevo proyecto';
-    document.getElementById('field-origen-line').style.display = esCotizacion ? 'none' : '';
-    if(esCotizacion){
-      document.getElementById('field-fecha-recepcion-slot').appendChild(document.getElementById('field-fecha-recepcion'));
-    } else {
-      restaurarLayoutFechasNormal();
-    }
-    document.getElementById('field-fecha-entrega-row').style.display = esCotizacion ? 'none' : '';
-    document.getElementById('field-limite-line').style.display = esCotizacion ? 'none' : '';
+    restaurarLayoutFechasNormal();
+    aplicarModoCotizacion();
+    document.getElementById('f-fecha-envio').value = '';
     ['f-cliente','f-descripcion','f-limite','f-numero-oc','f-notas','f-monto'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('f-origen').value = 'cotizacion';
     document.getElementById('f-tipo-counter').checked = false;
@@ -2538,7 +2567,8 @@ function saveModal(){
   if(!cliente){ showAlert('Escribe el nombre del cliente.'); return; }
   const tipoClienteVal = resolvedTipoCliente();
   if(!editingId && !tipoClienteVal){ showAlert('Selecciona el Tipo de Cliente: Counter o Corporativo.'); return; }
-  const origen = document.getElementById('f-origen').value;
+  const esModalCotizacionGuardado = esModalCotizacion();
+  const origen = esModalCotizacionGuardado && !editingId ? 'cotizacion' : document.getElementById('f-origen').value;
   const montoVal = document.getElementById('f-monto').value;
   const base = {
     origen,
@@ -2586,7 +2616,7 @@ function saveModal(){
     let finalEstado = estadoPreferido;
     if(nuevoEstadoElegido === prevEstado && estadoPreferido === prevEstado && origen==='cotizacion'){
       const ocNueva = !prevTieneOC && base.tieneOC;
-      if(ocNueva && ['Pendiente','Pendiente de cotizar','Cotizado'].includes(prevEstado)) finalEstado = 'Aprobado';
+      if(ocNueva && ['Pendiente','Por cotizar','Enviada'].includes(prevEstado)) finalEstado = 'Aprobado';
     }
     if(finalEstado!==ESTADO_RECHAZADO && !estadoOptions(origen).includes(finalEstado)){
       finalEstado = 'En proceso';
@@ -2595,8 +2625,12 @@ function saveModal(){
     if(!pendientePagoNuevo && finalEstado!==ESTADO_PENDIENTE_PAGO){ it.pendientePago = false; it.fechaPendientePago = null; }
     const fechaEntregaManual = document.getElementById('f-fecha-entrega').value;
     if(fechaEntregaManual) it.fechaCerrado = fechaEntregaManual;
+    if(esModalCotizacionGuardado){
+      const fechaEnvioManual = document.getElementById('f-fecha-envio').value;
+      if(fechaEnvioManual && it.estado==='Enviada') it.fechaCotizado = fechaEnvioManual;
+    }
   } else {
-    let estadoInicial = origen==='cotizacion' ? 'Pendiente de cotizar' : 'Pendiente';
+    let estadoInicial = origen==='cotizacion' ? 'Por cotizar' : 'Pendiente';
     const facturadoInicial = document.getElementById('f-facturado').checked;
     let pagoContadoInicial = document.getElementById('f-pago-contado').checked;
     let pendientePagoInicial = document.getElementById('f-pendiente-pago').checked;
@@ -2701,20 +2735,20 @@ function isCriticalAlert(it){
   const atrasadoGeneral = daysSince(it.fechaRecibido) > 5;
   return vencido || atrasadoGeneral;
 }
-function puedePausar(it){ return phaseKeyOf(it.estado)==='encurso' || it.estado==='Cotizado' || it.estado==='Listo para entrega' || it.estado==='Aprobado'; }
+function puedePausar(it){ return phaseKeyOf(it.estado)==='encurso' || it.estado==='Enviada' || it.estado==='Listo para entrega' || it.estado==='Aprobado'; }
 function pausaLabel(it){
-  if(it.estado==='Cotizado') return 'Esperando aprobacion';
+  if(it.estado==='Enviada') return 'Esperando aprobacion';
   if(it.estado==='Listo para entrega') return 'Esperando recogida';
   if(it.estado==='Aprobado') return 'Esperando inicio';
   return 'Pausado';
 }
 function pausaAccionLabel(it){
-  if(it.estado==='Cotizado') return 'Marcar esperando aprobacion';
+  if(it.estado==='Enviada') return 'Marcar esperando aprobacion';
   if(it.estado==='Listo para entrega') return 'Marcar esperando recogida';
   if(it.estado==='Aprobado') return 'Marcar esperando inicio';
   return 'Pausar';
 }
-function pausaIcon(it){ return (it.estado==='Cotizado' || it.estado==='Listo para entrega' || it.estado==='Aprobado') ? '&#9203;' : '&#9208;'; }
+function pausaIcon(it){ return (it.estado==='Enviada' || it.estado==='Listo para entrega' || it.estado==='Aprobado') ? '&#9203;' : '&#9208;'; }
 function pausarProyecto(id, ev){
   if(ev) ev.stopPropagation();
   const it = items.find(i=>i.id===id);
@@ -2791,9 +2825,9 @@ function cardHtml(it, orderNum){
       ${isCriticalAlert(it) ? '<div class="blink-badge">&#9888; ATRASADO</div>' : ''}
       ${it.pausado
         ? `<button class="advance-btn" onclick="reanudarProyecto('${it.id}', event)">&#9654; Reanudar</button>`
-        : (it.estado===ESTADO_PENDIENTE_PAGO ? `<button class="advance-btn" onclick="marcarPagadoDesdeCard('${it.id}', event)">&#10003; Marcar pagado</button><button class="advance-btn" style="margin-top:6px;" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>` : next ? `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${next} &#9656;</button>` : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
+        : (it.estado===ESTADO_PENDIENTE_PAGO ? `<button class="advance-btn" onclick="marcarPagadoDesdeCard('${it.id}', event)">&#10003; Marcar pagado</button><button class="advance-btn" style="margin-top:6px;" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>` : next ? `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${estadoTxt(next, it)} &#9656;</button>` : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
       ${(!it.pausado && puedePausar(it)) ? `<button class="reject-btn" style="border-color:var(--ink-3); color:var(--ink-2);" onclick="pausarProyecto('${it.id}', event)">${pausaIcon(it)} ${pausaAccionLabel(it)}</button>` : ''}
-      ${it.estado==='Cotizado' ? `<button class="reject-btn" onclick="rechazarProyecto('${it.id}', event)">&#10005; No aprobado</button>` : ''}
+      ${it.estado==='Enviada' ? `<button class="reject-btn" onclick="rechazarProyecto('${it.id}', event)">&#10005; No aprobada</button>` : ''}
     </div>
   `;
 }
@@ -2821,7 +2855,7 @@ function setCotizacionesSubView(v){ cotizacionesSubView = v; render(); }
 function cotizacionRechazadaRowHtml(it){
   return `
       <div class="archive-row">
-        <span class="pill ${pillClassFor(it.estado)}">${it.estado}</span>
+        <span class="pill ${pillClassFor(it.estado)}">${estadoTxt(it.estado, it)}</span>
         <span class="cat-tag">${it.categoria||'-'}</span>
         <b>${it.cliente}</b>
         <span class="archive-desc">${it.descripcion||''}</span>
@@ -3199,7 +3233,7 @@ function renderResumenDiario(){
   let drilldownDiarioHtml = '';
   if(resumenDiarioDrilldownTipo && listasDiario[resumenDiarioDrilldownTipo]){
     const lista = listasDiario[resumenDiarioDrilldownTipo];
-    const nombres = {registrados:'Registrados hoy', cotizados:'Cotizados hoy', aprobados:'Aprobados hoy', entregados:'Entregados hoy', facturado:'Facturados hoy'};
+    const nombres = {registrados:'Registrados hoy', cotizados:'Cotizaciones enviadas hoy', aprobados:'Aprobados hoy', entregados:'Entregados hoy', facturado:'Facturados hoy'};
     drilldownDiarioHtml = `
       <div style="margin-top:14px; border-top:1.5px dashed var(--border-strong); padding-top:12px;">
         <div style="font-weight:800; color:var(--purple); font-size:12.5px; margin-bottom:8px;">${nombres[resumenDiarioDrilldownTipo]} (${lista.length})</div>
@@ -3216,7 +3250,7 @@ function renderResumenDiario(){
   document.getElementById('resumen-diario-body').innerHTML = `
     <div class="resumen-stats" style="grid-template-columns:repeat(5,1fr);">
       <div class="resumen-stat ${resumenDiarioDrilldownTipo==='registrados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('registrados')"><span class="num">${registrados}</span><span class="lbl">Registrados</span></div>
-      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotizados</span></div>
+      <div class="resumen-stat ${resumenDiarioDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotiz. enviadas</span></div>
       <div class="resumen-stat ${resumenDiarioDrilldownTipo==='aprobados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('aprobados')"><span class="num">${aprobados}</span><span class="lbl">Aprobados</span></div>
       <div class="resumen-stat ${resumenDiarioDrilldownTipo==='entregados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('entregados')"><span class="num">${entregados}</span><span class="lbl">Entregados</span></div>
       <div class="resumen-stat ${resumenDiarioDrilldownTipo==='facturado'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDiarioDrilldown('facturado')"><span class="num" style="font-size:20px;">${formatMoney(facturadoHoy)}</span><span class="lbl">Facturado</span></div>
@@ -3293,7 +3327,7 @@ function renderResumen(){
   let drilldownHtml = '';
   if(resumenDrilldownTipo && listas[resumenDrilldownTipo]){
     const lista = listas[resumenDrilldownTipo];
-    const nombres = {cotizados:'Cotizados esta semana', aprobados:'Aprobados esta semana', cerrados:'Cerrados esta semana', facturado:'Facturados esta semana'};
+    const nombres = {cotizados:'Cotizaciones enviadas esta semana', aprobados:'Aprobados esta semana', cerrados:'Cerrados esta semana', facturado:'Facturados esta semana'};
     drilldownHtml = `
       <div style="margin-top:14px; border-top:1.5px dashed var(--border-strong); padding-top:12px;">
         <div style="font-weight:800; color:var(--purple); font-size:12.5px; margin-bottom:8px;">${nombres[resumenDrilldownTipo]} (${lista.length})</div>
@@ -3314,7 +3348,7 @@ function renderResumen(){
       <button class="btn-icon" onclick="navWeek(1)">&#8250;</button>
     </div>
     <div class="resumen-stats">
-      <div class="resumen-stat ${resumenDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotizados</span></div>
+      <div class="resumen-stat ${resumenDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotiz. enviadas</span></div>
       <div class="resumen-stat ${resumenDrilldownTipo==='aprobados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDrilldown('aprobados')"><span class="num">${aprobados}</span><span class="lbl">Aprobados</span></div>
       <div class="resumen-stat ${resumenDrilldownTipo==='cerrados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDrilldown('cerrados')"><span class="num">${cerrados}</span><span class="lbl">Cerrados</span></div>
       <div class="resumen-stat ${resumenDrilldownTipo==='facturado'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenDrilldown('facturado')"><span class="num">${pctLabel}%</span><span class="lbl">De la meta</span></div>
@@ -3371,7 +3405,7 @@ function renderResumenMensual(){
   let drilldownHtml = '';
   if(resumenMensualDrilldownTipo && listas[resumenMensualDrilldownTipo]){
     const lista = listas[resumenMensualDrilldownTipo];
-    const nombres = {cotizados:'Cotizados este mes', aprobados:'Aprobados este mes', cerrados:'Cerrados este mes', facturado:'Facturados este mes', ops:'Ordenes de produccion completadas este mes'};
+    const nombres = {cotizados:'Cotizaciones enviadas este mes', aprobados:'Aprobados este mes', cerrados:'Cerrados este mes', facturado:'Facturados este mes', ops:'Ordenes de produccion completadas este mes'};
     drilldownHtml = `
       <div style="margin-top:14px; border-top:1.5px dashed var(--border-strong); padding-top:12px;">
         <div style="font-weight:800; color:var(--purple); font-size:12.5px; margin-bottom:8px;">${nombres[resumenMensualDrilldownTipo]} (${lista.length})</div>
@@ -3392,7 +3426,7 @@ function renderResumenMensual(){
       <button class="btn-icon" onclick="navMonth(1)">&#8250;</button>
     </div>
     <div class="resumen-stats" style="grid-template-columns:repeat(3,1fr);">
-      <div class="resumen-stat ${resumenMensualDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotizados</span></div>
+      <div class="resumen-stat ${resumenMensualDrilldownTipo==='cotizados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('cotizados')"><span class="num">${cotizados}</span><span class="lbl">Cotiz. enviadas</span></div>
       <div class="resumen-stat ${resumenMensualDrilldownTipo==='aprobados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('aprobados')"><span class="num">${aprobados}</span><span class="lbl">Aprobados</span></div>
       <div class="resumen-stat ${resumenMensualDrilldownTipo==='cerrados'?'activo':''}" style="cursor:pointer;" onclick="toggleResumenMensualDrilldown('cerrados')"><span class="num">${cerrados}</span><span class="lbl">Cerrados</span></div>
     </div>
@@ -3433,7 +3467,7 @@ function render(){
     if(it.pausado) panoramaIds.add(it.id);
     if(it.tipoCliente==='corporativa' && opDisponible(it) && !it.opNoAplica && !opTieneContenido(it.ordenProduccion)) panoramaIds.add(it.id);
     if(CERRADOS.includes(it.estado) && it.tipoCliente==='corporativa' && !it.facturado) panoramaIds.add(it.id);
-    if(it.estado==='Pendiente de cotizar') panoramaIds.add(it.id);
+    if(it.estado==='Por cotizar') panoramaIds.add(it.id);
     if(it.pendientePago || it.estado===ESTADO_PENDIENTE_PAGO) panoramaIds.add(it.id);
   });
   document.getElementById('count-panorama').textContent = panoramaIds.size;

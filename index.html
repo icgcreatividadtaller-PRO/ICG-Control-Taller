@@ -526,7 +526,7 @@
       <span id="f-facturado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
     <div class="oc-line" id="field-pago-contado-line">
-      <input type="checkbox" id="f-pago-contado" onclick="if(this.checked){ document.getElementById('f-pendiente-pago').checked=false; } toggleFechaPagoVisible();">
+      <input type="checkbox" id="f-pago-contado" onclick="if(this.checked){ document.getElementById('f-pendiente-pago').checked=false; } toggleFechaPagoVisible(); syncEstadoSelectConPago();">
       <label style="margin:0;">Pagado</label>
       <span id="f-pago-contado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
@@ -535,13 +535,13 @@
       <input type="date" id="f-fecha-pago" style="text-transform:none;">
     </div>
     <div class="oc-line" id="field-pendiente-pago-line">
-      <input type="checkbox" id="f-pendiente-pago" onclick="if(this.checked){ document.getElementById('f-pago-contado').checked=false; toggleFechaPagoVisible(); }">
+      <input type="checkbox" id="f-pendiente-pago" onclick="if(this.checked){ document.getElementById('f-pago-contado').checked=false; toggleFechaPagoVisible(); } syncEstadoSelectConPago();">
       <label style="margin:0;">Entregado / Pendiente de Pago</label>
       <span id="f-pendiente-pago-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
     </div>
     <div class="field" id="field-estado" style="display:none;">
       <label>Estado</label>
-      <select id="f-estado"></select>
+      <select id="f-estado" onchange="handleEstadoSelectChange()"></select>
     </div>
     <div class="field" id="field-historial-btn" style="display:none;">
       <button type="button" class="btn-ghost" style="width:100%;" onclick="openHistorial()">&#128337; Ver historial de cambios</button>
@@ -2463,8 +2463,35 @@ function refreshClientesList(){
 }
 
 function toggleFechaPagoVisible(){
-  const pagadoVisible = document.getElementById('field-pago-contado-line').style.display !== 'none';
+  const estSel = document.getElementById('f-estado');
+  const hayOpcionPagado = !!(estSel && estSel.querySelector('option[value="__PAGADO__"]'));
+  const pagadoVisible = document.getElementById('field-pago-contado-line').style.display !== 'none' || hayOpcionPagado;
   document.getElementById('field-fecha-pago-line').style.display = (pagadoVisible && document.getElementById('f-pago-contado').checked) ? '' : 'none';
+}
+// "Pagado" en el selector de Estado = Entregado + pago registrado (con su fecha)
+function handleEstadoSelectChange(){
+  const v = document.getElementById('f-estado').value;
+  const pago = document.getElementById('f-pago-contado');
+  const pend = document.getElementById('f-pendiente-pago');
+  if(v==='__PAGADO__'){
+    pago.checked = true; pend.checked = false;
+    if(!document.getElementById('f-fecha-pago').value) document.getElementById('f-fecha-pago').value = todayStr();
+  } else if(v===ESTADO_PENDIENTE_PAGO){
+    pend.checked = true; pago.checked = false;
+  } else if(v==='Entregado'){
+    pend.checked = false; pago.checked = false;
+  }
+  toggleFechaPagoVisible();
+}
+function syncEstadoSelectConPago(){
+  const estSel = document.getElementById('f-estado');
+  if(!estSel || !estSel.querySelector('option[value="__PAGADO__"]')) return;
+  const pago = document.getElementById('f-pago-contado').checked;
+  const pend = document.getElementById('f-pendiente-pago').checked;
+  const cerrado = ['Entregado','__PAGADO__',ESTADO_PENDIENTE_PAGO].includes(estSel.value);
+  if(!cerrado) return;
+  estSel.value = pago ? '__PAGADO__' : (pend ? ESTADO_PENDIENTE_PAGO : 'Entregado');
+  if(pago && !document.getElementById('f-fecha-pago').value) document.getElementById('f-fecha-pago').value = todayStr();
 }
 function restaurarLayoutFechasNormal(){
   const fechaRecepcionDiv = document.getElementById('field-fecha-recepcion');
@@ -2512,7 +2539,13 @@ function openModal(prefillId){
     buildCategoriaSelect(it.categoria);
     const estSel = document.getElementById('f-estado');
     const opcionesEstado = esModalCotizacion() ? [...ESTADOS_COTIZACION, 'Aprobado', ESTADO_RECHAZADO] : estadoOptions(it.origen);
-    estSel.innerHTML = opcionesEstado.map(e=>`<option value="${e}" ${e===it.estado?'selected':''}>${estadoTxt(e, it)}</option>`).join('');
+    const esPagadoAhora = it.estado==='Entregado' && !!it.pagoContado;
+    estSel.innerHTML = opcionesEstado.map(e=>{
+      const sel = e===it.estado && !esPagadoAhora;
+      const extra = (e===ESTADO_PENDIENTE_PAGO && !esModalCotizacion()) ? `<option value="__PAGADO__" ${esPagadoAhora?'selected':''}>Pagado</option>` : '';
+      return `<option value="${e}" ${sel?'selected':''}>${estadoTxt(e, it)}</option>` + extra;
+    }).join('');
+    toggleFechaPagoVisible();
     fieldEstado.style.display = 'block';
     btnDelete.style.display = 'block';
     document.getElementById('field-historial-btn').style.display = 'block';
@@ -2589,10 +2622,11 @@ function saveModal(){
     const it = items.find(i=>i.id===editingId);
     const prevEstado = it.estado;
     const prevTieneOC = it.tieneOC;
-    const nuevoEstadoElegido = document.getElementById('f-estado').value;
+    let nuevoEstadoElegido = document.getElementById('f-estado').value;
     const facturadoNuevo = document.getElementById('f-facturado').checked;
     let pagoContadoNuevo = document.getElementById('f-pago-contado').checked;
     let pendientePagoNuevo = document.getElementById('f-pendiente-pago').checked;
+    if(nuevoEstadoElegido==='__PAGADO__'){ nuevoEstadoElegido = 'Entregado'; pagoContadoNuevo = true; pendientePagoNuevo = false; }
     if(pagoContadoNuevo && pendientePagoNuevo){
       if(!it.pagoContado){ pendientePagoNuevo = false; } else { pagoContadoNuevo = false; }
     }

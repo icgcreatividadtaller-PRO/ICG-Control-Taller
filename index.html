@@ -2914,12 +2914,22 @@ function cotizacionRechazadaRowHtml(it){
         ${it.monto ? `<span class="money-tag">${formatMoney(it.monto)}</span>` : ''}
         <span class="archive-date">${it.fechaUltimoCambio}</span>
         <button class="icon-btn" onclick="openModal('${it.id}')">Ver</button>
-        <button class="icon-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar</button>
+        <button class="icon-btn" onclick="reabrirCotizacion('${it.id}', event)">&#8617; Reabrir</button>
+        ${it.archivado ? '<span class="archive-date">En Archivo</span>' : `<button class="icon-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar</button>`}
       </div>`;
 }
-function renderCotizaciones(active, orderMap){
+function reabrirCotizacion(id, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  it.archivado = false;
+  applyEstadoTransition(it, 'Enviada');
+  saveItems(); render();
+}
+function renderCotizaciones(active, orderMap, todas){
   const enCotizacion = active.filter(it=>it.origen==='cotizacion' && ESTADOS_COTIZACION.includes(it.estado));
-  const noAprobados = active.filter(it=>it.origen==='cotizacion' && it.estado===ESTADO_RECHAZADO);
+  // No aprobadas: todas las que tengan ese estado, archivadas o no (la cotizacion no depende del archivo de proyectos)
+  const noAprobados = (todas||active).filter(it=>!it.papelera && it.origen!=='directo' && it.estado===ESTADO_RECHAZADO);
   const totalCount = enCotizacion.length;
 
   const subtabsHtml = `<div class="subtabs">
@@ -3534,7 +3544,7 @@ function render(){
   try{
     if(view==='cotizaciones'){
       subtabsHolder.innerHTML = '';
-      content.innerHTML = renderCotizaciones(active, orderMap);
+      content.innerHTML = renderCotizaciones(active, orderMap, searched);
     } else if(view==='tablero'){
       subtabsHolder.innerHTML = '';
       content.innerHTML = renderBoard(active, orderMap);

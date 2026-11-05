@@ -522,9 +522,12 @@
       <input id="f-numero-oc" placeholder="Numero de OC" style="max-width:170px;" disabled>
     </div>
     <div class="oc-line" id="field-facturado-line">
-      <input type="checkbox" id="f-facturado">
+      <input type="checkbox" id="f-facturado" onclick="if(this.checked && !document.getElementById('f-fecha-facturado').value){ document.getElementById('f-fecha-facturado').value = todayStr(); } toggleFechaFacturadoVisible();">
       <label style="margin:0;">Facturado</label>
-      <span id="f-facturado-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
+    </div>
+    <div class="field" id="field-fecha-facturado-line" style="display:none; margin-top:-6px;">
+      <label>Fecha de factura</label>
+      <input type="date" id="f-fecha-facturado" style="text-transform:none;">
     </div>
     <div class="oc-line" id="field-pago-contado-line">
       <input type="checkbox" id="f-pago-contado" onclick="if(this.checked){ document.getElementById('f-pendiente-pago').checked=false; } toggleFechaPagoVisible(); syncEstadoSelectConPago();">
@@ -1552,6 +1555,7 @@ function actualizarCamposPorTipoCliente(){
   document.getElementById('field-pago-contado-line').style.display = mostrarCounter ? '' : 'none';
   document.getElementById('field-pendiente-pago-line').style.display = mostrarCounter ? '' : 'none';
   toggleFechaPagoVisible();
+  toggleFechaFacturadoVisible();
 }
 function resolvedTipoCliente(){
   if(document.getElementById('f-tipo-counter').checked) return 'counter';
@@ -2463,6 +2467,11 @@ function refreshClientesList(){
   document.getElementById('clientes-list').innerHTML = allClientes().map(c=>`<option value="${c}">`).join('');
 }
 
+function toggleFechaFacturadoVisible(){
+  const linea = document.getElementById('field-facturado-line');
+  const visible = linea.style.display !== 'none' && document.getElementById('f-facturado').checked;
+  document.getElementById('field-fecha-facturado-line').style.display = visible ? '' : 'none';
+}
 function toggleFechaPagoVisible(){
   const estSel = document.getElementById('f-estado');
   const hayOpcionPagado = !!(estSel && estSel.querySelector('option[value="__PAGADO__"]'));
@@ -2527,7 +2536,7 @@ function openModal(prefillId){
     document.getElementById('f-fecha-entrega').value = it.fechaCerrado||'';
     document.getElementById('f-tiene-oc').checked = it.tieneOC;
     document.getElementById('f-facturado').checked = !!it.facturado;
-    document.getElementById('f-facturado-fecha').textContent = it.fechaFacturado ? ('Desde '+fmtDate(it.fechaFacturado)) : '';
+    document.getElementById('f-fecha-facturado').value = it.fechaFacturado || '';
     document.getElementById('f-pago-contado').checked = !!it.pagoContado;
     document.getElementById('f-pago-contado-fecha').textContent = it.fechaPagoContado ? ('Desde '+fmtDate(it.fechaPagoContado)) : '';
     document.getElementById('f-fecha-pago').value = it.fechaPagoContado||'';
@@ -2572,7 +2581,7 @@ function openModal(prefillId){
     document.getElementById('f-fecha-entrega').value = '';
     document.getElementById('f-tiene-oc').checked = false;
     document.getElementById('f-facturado').checked = false;
-    document.getElementById('f-facturado-fecha').textContent = '';
+    document.getElementById('f-fecha-facturado').value = '';
     document.getElementById('f-pago-contado').checked = false;
     document.getElementById('f-pago-contado-fecha').textContent = '';
     document.getElementById('f-fecha-pago').value = '';
@@ -2638,8 +2647,9 @@ function saveModal(){
     if(pagoContadoNuevo && estadoPreferido===ESTADO_PENDIENTE_PAGO) estadoPreferido = 'Entregado';
     Object.assign(it, base);
 
-    if(facturadoNuevo && !it.facturado){ it.fechaFacturado = todayStr(); }
-    if(!facturadoNuevo){ it.fechaFacturado = null; }
+    const fechaFacturadoManual = document.getElementById('f-fecha-facturado').value;
+    if(facturadoNuevo){ it.fechaFacturado = fechaFacturadoManual || it.fechaFacturado || todayStr(); }
+    else { it.fechaFacturado = null; }
     it.facturado = facturadoNuevo;
 
     const fechaPagoManual = document.getElementById('f-fecha-pago').value;

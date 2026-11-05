@@ -1162,8 +1162,18 @@ function watchItemsRealtime(){
   }).catch(()=>{ /* sin Firebase disponible, no hay tiempo real */ });
 }
 
+// La portada se mantiene un minimo de tiempo al abrir; las pantallas se encolan para conservar su orden
+const SPLASH_MIN_MS = 3500;
+let splashDone = false;
+const splashQueue = [];
+setTimeout(()=>{ splashDone = true; splashQueue.splice(0).forEach(f=>f()); }, SPLASH_MIN_MS);
+function viaSplash(f){ if(splashDone) f(); else splashQueue.push(f); }
+function showLogin(msg){ viaSplash(()=>_showLogin(msg)); }
+function showLoadingScreen(){ viaSplash(()=>_showLoadingScreen()); }
+function showApp(){ viaSplash(()=>_showApp()); }
+
 let watchStarted = false;
-function showLogin(msg){
+function _showLogin(msg){
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('loading-screen').classList.add('hidden');
   document.getElementById('app-root').style.display = 'none';
@@ -1175,13 +1185,13 @@ function showLogin(msg){
     errEl.classList.add('show');
   }
 }
-function showLoadingScreen(){
+function _showLoadingScreen(){
   const lm = document.getElementById('loading-msg'); if(lm) lm.textContent = 'Cargando tus datos...';
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('loading-screen').classList.remove('hidden');
   document.getElementById('app-root').style.display = 'none';
 }
-function showApp(){
+function _showApp(){
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('loading-screen').classList.add('hidden');
   document.getElementById('app-root').style.display = '';

@@ -319,7 +319,7 @@
 
   /* ===== Pronóstico de facturación ===== */
   #overlay-pronostico{background:rgba(3,5,20,.78);}
-  .pron-modal{max-width:1040px; position:relative; overflow:hidden; padding:26px 30px 24px; color:#E7EAFF; border:1px solid rgba(130,150,255,.28); border-top:1px solid rgba(130,150,255,.28);
+  .pron-modal{max-width:1120px; position:relative; overflow:hidden; padding:26px 30px 24px; color:#E7EAFF; border:1px solid rgba(130,150,255,.28); border-top:1px solid rgba(130,150,255,.28);
     background:radial-gradient(ellipse 80% 50% at 30% 0%, #1c2278 0%, rgba(11,16,51,0) 70%), linear-gradient(165deg,#0B1033 0%,#0A0F3C 55%,#060924 100%);
     box-shadow:0 30px 90px rgba(0,0,12,.65), 0 0 70px rgba(70,90,255,.16); isolation:isolate; text-transform:none;}
   .pron-modal::before{content:''; position:absolute; inset:0; z-index:-2; pointer-events:none;
@@ -328,14 +328,14 @@
     background-image:var(--dna-img); background-repeat:repeat-y; background-size:260px 450px; background-position:center 0; animation:pron-dna 60s linear infinite;}
   @keyframes pron-dna{from{background-position:center 0;} to{background-position:center 450px;}}
   .pron-head{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;}
-  .pron-title{font-size:15px; font-weight:800; letter-spacing:.28em; color:#EEF0FF; text-transform:uppercase; display:flex; align-items:center; gap:10px; margin:0;}
+  .pron-title{font-size:18px; font-weight:800; letter-spacing:.28em; color:#EEF0FF; text-transform:uppercase; display:flex; align-items:center; gap:10px; margin:0;}
   .pron-live{width:8px; height:8px; border-radius:50%; background:#34E0A1; box-shadow:0 0 0 0 rgba(52,224,161,.6); animation:pron-pulse 2s infinite;}
   @keyframes pron-pulse{0%{box-shadow:0 0 0 0 rgba(52,224,161,.55);} 70%{box-shadow:0 0 0 9px rgba(52,224,161,0);} 100%{box-shadow:0 0 0 0 rgba(52,224,161,0);}}
-  .pron-nav{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; letter-spacing:.12em; color:#8392FF; text-transform:uppercase;}
-  .pron-nav button{background:rgba(130,150,255,.1); border:1px solid rgba(130,150,255,.3); color:#CFD6FF; border-radius:6px; width:30px; height:28px; cursor:pointer; font-size:12px;}
+  .pron-nav{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; letter-spacing:.12em; color:#8392FF; text-transform:uppercase;}
+  .pron-nav button{background:rgba(130,150,255,.1); border:1px solid rgba(130,150,255,.3); color:#CFD6FF; border-radius:6px; width:30px; height:28px; cursor:pointer; font-size:15px;}
   .pron-nav button:hover:not(:disabled){background:rgba(130,150,255,.25);} .pron-nav button:disabled{opacity:.3; cursor:default;}
   .pron-card{background:rgba(255,255,255,.035); border:1px solid rgba(130,150,255,.2); border-radius:14px; padding:16px 18px; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);}
-  .pron-lbl{font-size:10px; font-weight:700; letter-spacing:.24em; color:#8392FF; text-transform:uppercase;}
+  .pron-lbl{font-size:12.5px; font-weight:700; letter-spacing:.24em; color:#8392FF; text-transform:uppercase;}
   .pron-top{display:grid; grid-template-columns:minmax(300px,1.05fr) 1fr; gap:14px; align-items:stretch;}
   .pron-gauge{text-align:center; position:relative;}
   .pron-gauge svg{width:100%; max-width:360px; height:auto; overflow:visible;}
@@ -343,52 +343,52 @@
   @keyframes pron-draw{to{stroke-dashoffset:0;}}
   .pron-noanim .seg{animation:none; stroke-dashoffset:0;}
   .pron-gauge .center{position:absolute; left:0; right:0; bottom:22px; pointer-events:none;}
-  .pron-big{font-size:38px; font-weight:800; color:#fff; line-height:1; letter-spacing:.01em; text-shadow:0 0 28px rgba(131,146,255,.65);}
-  .pron-sub{font-size:10.5px; color:#8A93C8; letter-spacing:.14em; margin-top:6px; text-transform:uppercase;}
-  .pron-status{display:inline-block; margin-top:10px; padding:5px 12px; border-radius:999px; font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;}
+  .pron-big{font-size:48px; font-weight:800; color:#fff; line-height:1; letter-spacing:.01em; text-shadow:0 0 28px rgba(131,146,255,.65);}
+  .pron-sub{font-size:13px; color:#8A93C8; letter-spacing:.14em; margin-top:6px; text-transform:uppercase;}
+  .pron-status{display:inline-block; margin-top:10px; padding:5px 12px; border-radius:999px; font-size:13px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;}
   .pron-status.ok{background:rgba(52,224,161,.14); color:#4DF0B2; border:1px solid rgba(52,224,161,.4);}
   .pron-status.mid{background:rgba(253,201,1,.12); color:#FDC901; border:1px solid rgba(253,201,1,.4);}
   .pron-status.low{background:rgba(218,15,72,.14); color:#FF6B92; border:1px solid rgba(218,15,72,.45);}
-  .pron-headline{font-size:13px; line-height:1.55; color:#C9D0FF; font-weight:500; margin:2px 0 14px;}
+  .pron-headline{font-size:16px; line-height:1.55; color:#C9D0FF; font-weight:500; margin:2px 0 14px;}
   .pron-headline b{color:#fff;}
   .pron-stack{position:relative; height:16px; border-radius:8px; background:rgba(130,150,255,.12); overflow:visible; margin:26px 0 18px;}
   .pron-stack .s{position:absolute; top:0; bottom:0; transition:width .9s cubic-bezier(.3,.7,.2,1);}
   .pron-stack .tick{position:absolute; top:-7px; bottom:-7px; width:2px; background:#fff; opacity:.85;}
-  .pron-stack .tick span{position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:9px; font-weight:800; letter-spacing:.14em; color:#fff; white-space:nowrap;}
+  .pron-stack .tick span{position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:11.5px; font-weight:800; letter-spacing:.14em; color:#fff; white-space:nowrap;}
   .pron-legend{display:grid; gap:8px;}
-  .pron-leg{display:flex; align-items:center; gap:10px; font-size:12px; color:#C9D0FF; font-weight:600;}
+  .pron-leg{display:flex; align-items:center; gap:10px; font-size:15px; color:#C9D0FF; font-weight:600;}
   .pron-leg i{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
-  .pron-leg .n{margin-left:auto; color:#fff; font-weight:800;} .pron-leg .c{color:#7780B8; font-size:10.5px; font-weight:600; min-width:62px; text-align:right;}
-  .pron-days{display:flex; align-items:flex-end; gap:8px; height:84px; margin-top:6px;}
-  .pron-day{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:5px; font-size:9.5px; color:#7780B8; font-weight:700; letter-spacing:.1em;}
+  .pron-leg .n{margin-left:auto; color:#fff; font-weight:800;} .pron-leg .c{color:#7780B8; font-size:13px; font-weight:600; min-width:62px; text-align:right;}
+  .pron-days{display:flex; align-items:flex-end; gap:8px; height:96px; margin-top:8px;}
+  .pron-day{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:5px; font-size:12px; color:#7780B8; font-weight:700; letter-spacing:.1em;}
   .pron-day .bar{width:100%; border-radius:4px 4px 2px 2px; background:rgba(130,150,255,.15); min-height:3px; transition:height .9s cubic-bezier(.3,.7,.2,1);}
   .pron-day.real .bar{background:linear-gradient(180deg,#FDC901,#C79A00); box-shadow:0 0 14px rgba(253,201,1,.35);}
   .pron-day.hoy{color:#fff;} .pron-day.hoy .bar{outline:1px solid rgba(255,255,255,.5); outline-offset:2px;}
-  .pron-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px;}
+  .pron-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:12px; margin-top:14px;}
   .pron-tile{cursor:pointer; position:relative; transition:transform .15s, border-color .15s, background .15s;}
   .pron-tile:hover{transform:translateY(-2px); border-color:rgba(130,150,255,.5);}
   .pron-tile.activo{border-color:#8392FF; background:rgba(131,146,255,.12);}
-  .pron-tile .v{font-size:21px; font-weight:800; color:#fff; margin:8px 0 3px; letter-spacing:.01em;}
-  .pron-tile .k{font-size:11px; color:#8A93C8; font-weight:600;}
+  .pron-tile .v{font-size:27px; font-weight:800; color:#fff; margin:8px 0 3px; letter-spacing:.01em;}
+  .pron-tile .k{font-size:14px; color:#8A93C8; font-weight:600;}
   .pron-tile .bar{position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:0 3px 3px 0;}
   .pron-sec{margin-top:18px;}
-  .pron-sec h3{margin:0 0 10px; font-size:11px; font-weight:800; letter-spacing:.26em; color:#8392FF; text-transform:uppercase;}
+  .pron-sec h3{margin:0 0 10px; font-size:14px; font-weight:800; letter-spacing:.26em; color:#8392FF; text-transform:uppercase;}
   .pron-row{display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; cursor:pointer; border:1px solid transparent; transition:background .12s, border-color .12s;}
   .pron-row:hover{background:rgba(131,146,255,.1); border-color:rgba(130,150,255,.3);}
-  .pron-row .rk{width:22px; height:22px; border-radius:50%; background:rgba(131,146,255,.18); color:#CFD6FF; font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-  .pron-row .nm{flex:1; min-width:0;} .pron-row .nm b{display:block; font-size:12.5px; color:#fff; font-weight:700;} .pron-row .nm span{display:block; font-size:11px; color:#8A93C8; font-weight:500; margin-top:1px;}
-  .pron-row .av{width:70px; height:5px; border-radius:3px; background:rgba(130,150,255,.18); overflow:hidden; flex-shrink:0;} .pron-row .av i{display:block; height:100%; background:linear-gradient(90deg,#8392FF,#34E0A1);}
-  .pron-row .mt{font-size:12.5px; font-weight:800; color:#fff; min-width:84px; text-align:right;}
-  .pron-row .cum{font-size:10.5px; color:#7780B8; font-weight:700; min-width:92px; text-align:right;}
-  .pron-chip{display:inline-block; font-size:9px; font-weight:800; letter-spacing:.14em; padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap;}
+  .pron-row .rk{width:22px; height:22px; border-radius:50%; background:rgba(131,146,255,.18); color:#CFD6FF; font-size:13px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .pron-row .nm{flex:1; min-width:0;} .pron-row .nm b{display:block; font-size:15.5px; color:#fff; font-weight:700;} .pron-row .nm span{display:block; font-size:14px; color:#8A93C8; font-weight:500; margin-top:1px;}
+  .pron-row .av{width:80px; height:6px; border-radius:3px; background:rgba(130,150,255,.18); overflow:hidden; flex-shrink:0;} .pron-row .av i{display:block; height:100%; background:linear-gradient(90deg,#8392FF,#34E0A1);}
+  .pron-row .mt{font-size:15.5px; font-weight:800; color:#fff; min-width:100px; text-align:right;}
+  .pron-row .cum{font-size:13px; color:#7780B8; font-weight:700; min-width:110px; text-align:right;}
+  .pron-chip{display:inline-block; font-size:11.5px; font-weight:800; letter-spacing:.14em; padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap;}
   .pron-chip.min{background:rgba(253,201,1,.16); color:#FDC901; border:1px solid rgba(253,201,1,.45);} .pron-chip.max{background:rgba(52,224,161,.16); color:#4DF0B2; border:1px solid rgba(52,224,161,.45);}
-  .pron-warn{margin-top:14px; padding:10px 14px; border-radius:10px; background:rgba(218,15,72,.08); border:1px dashed rgba(218,15,72,.4); color:#FFB0C5; font-size:11.5px; font-weight:600; line-height:1.5;}
+  .pron-warn{margin-top:14px; padding:10px 14px; border-radius:10px; background:rgba(218,15,72,.08); border:1px dashed rgba(218,15,72,.4); color:#FFB0C5; font-size:14px; font-weight:600; line-height:1.5;}
   .pron-warn a{color:#fff; text-decoration:underline; cursor:pointer;}
-  .pron-foot{margin-top:16px; font-size:10.5px; color:#6B74A8; line-height:1.5; font-weight:500;}
-  .pron-close{background:transparent; border:1px solid rgba(130,150,255,.4); color:#CFD6FF; border-radius:8px; padding:9px 22px; font-weight:800; letter-spacing:.12em; font-size:11px; cursor:pointer; text-transform:uppercase; font-family:inherit;}
+  .pron-foot{margin-top:16px; font-size:13px; color:#6B74A8; line-height:1.5; font-weight:500;}
+  .pron-close{background:transparent; border:1px solid rgba(130,150,255,.4); color:#CFD6FF; border-radius:8px; padding:9px 22px; font-weight:800; letter-spacing:.12em; font-size:14px; cursor:pointer; text-transform:uppercase; font-family:inherit;}
   .pron-close:hover{background:rgba(130,150,255,.16);}
-  .pron-empty{padding:14px; text-align:center; color:#7780B8; font-size:12px;}
-  @media (max-width:760px){ .pron-top{grid-template-columns:1fr;} .pron-modal{padding:20px 16px;} .pron-modal::after{display:none;} .pron-big{font-size:30px;} .pron-row .cum,.pron-row .av{display:none;} }
+  .pron-empty{padding:14px; text-align:center; color:#7780B8; font-size:15px;}
+  @media (max-width:760px){ .pron-top{grid-template-columns:1fr;} .pron-modal{padding:20px 16px;} .pron-modal::after{display:none;} .pron-big{font-size:38px;} .pron-row .cum,.pron-row .av{display:none;} }
   /* ===== Portada (login + carga) ===== */
   .login-screen, .loading-screen{position:fixed; inset:0; z-index:1000; display:flex; padding:24px; overflow-y:auto; color:#fff; isolation:isolate;
     background:radial-gradient(ellipse 70% 55% at 50% 28%, #1c2278 0%, #0b1033 48%, #04061a 100%);}
@@ -3564,7 +3564,7 @@ function renderPronostico(soloDetalle){
     segs += `<path class="seg" pathLength="100" d="${arc(f0,f1)}" stroke="${color}" stroke-width="${sw}" style="animation-delay:${delay}s; ${extra||''}"/>`; delay += .25; };
   addSeg(R.real,'#FDC901'); addSeg(vListo,'#00A9C1'); addSeg(vCamino,'#8392FF'); addSeg(vRiesgo,'#DA0F48','opacity:.45;');
   const tickSvg = (v,lbl)=>{ const fr=f(v); const [x0,y0]=pt(fr,r-sw/2-5), [x1,y1]=pt(fr,r+sw/2+5), [tx,ty]=pt(fr,r+sw/2+18);
-    return `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#fff" stroke-width="2"/><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="#fff" font-size="9" font-weight="800" letter-spacing="1.5" text-anchor="middle" dominant-baseline="middle">${lbl}</text>`; };
+    return `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#fff" stroke-width="2"/><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="#fff" font-size="12" font-weight="800" letter-spacing="1.5" text-anchor="middle" dominant-baseline="middle">${lbl}</text>`; };
   const [gx,gy] = pt(f(pronostico),r);
   const gauge = `<svg viewBox="0 0 340 215" aria-hidden="true">
     <defs><filter id="pglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>

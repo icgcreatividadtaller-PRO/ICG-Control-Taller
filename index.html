@@ -377,6 +377,36 @@
   .pron-pot-item b{font-size:16.5px; color:#fff; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .pron-pot-item span{font-size:15.5px; color:#C3CBF2; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:1.2em;}
   .pron-pot-item em{font-style:normal; font-size:17.5px; font-weight:800; color:#FDC901;}
+  .pron-pot-item.seg{border-color:rgba(218,15,72,.6); background:rgba(218,15,72,.08);}
+  .pron-pot-item small{font-size:14px; font-weight:700; color:#B4BDEB;} .pron-pot-item.seg small{color:#FF8FAE;}
+  .pron-trend-stats{display:flex; flex-wrap:wrap; gap:6px 22px; margin-top:12px; font-size:16px; color:#C3CBF2; font-weight:600; line-height:1.5;} .pron-trend-stats b{color:#fff;}
+  .pron-wk-area{position:relative; height:190px; margin-top:26px;}
+  .pron-wk-lines{position:absolute; left:0; right:0; top:0; bottom:24px; pointer-events:none;}
+  .pron-wk-row{position:absolute; left:0; right:0; top:0; bottom:0; display:flex; gap:10px; align-items:stretch;}
+  .pron-wk{flex:1; display:flex; flex-direction:column; cursor:pointer; min-width:0;}
+  .pron-wk-col{position:relative; flex:1; border-bottom:1px solid rgba(130,150,255,.3);}
+  .pron-wk .bar{position:absolute; left:14%; right:14%; bottom:0; border-radius:5px 5px 0 0; transition:height .9s cubic-bezier(.3,.7,.2,1);}
+  .pron-wk .bar.ok{background:linear-gradient(180deg,#FDC901,#C79A00);} .pron-wk .bar.no{background:linear-gradient(180deg,#8392FF,#4B58B8);}
+  .pron-wk .bar.proj{background:rgba(131,146,255,.28); border:1px dashed rgba(169,182,255,.7); z-index:0;}
+  .pron-wk .bar.ok,.pron-wk .bar.no{z-index:1;}
+  .pron-wk .snap{position:absolute; left:8%; right:8%; height:3px; background:#fff; opacity:.9; z-index:2;}
+  .pron-wk .val{position:absolute; left:-6px; right:-6px; text-align:center; font-size:14.5px; font-weight:800; color:#fff; white-space:nowrap; z-index:3;}
+  .pron-wk .lbl{height:24px; flex-shrink:0; font-size:14.5px; font-weight:700; color:#B4BDEB; text-align:center; padding-top:5px; letter-spacing:.06em; text-transform:uppercase;}
+  .pron-wk{position:relative;} .pron-wk.sel .lbl{color:#fff;} .pron-wk.sel .pron-wk-col{box-shadow:0 0 0 1px rgba(255,255,255,.35) inset; background:rgba(131,146,255,.07); border-radius:6px 6px 0 0;}
+  .pron-wk:hover .pron-wk-col{background:rgba(131,146,255,.1);}
+  .pron-wk-area .mline{position:absolute; left:0; right:0; border-top:1px dashed rgba(253,201,1,.55); z-index:0; pointer-events:none;}
+  .pron-wk-area .mline.mx{border-top-color:rgba(52,224,161,.55);}
+  .pron-wk-area .mline span{position:absolute; right:0; top:-17px; font-size:12.5px; font-weight:800; letter-spacing:.1em; color:#FDC901;} .pron-wk-area .mline.mx span{color:#4DF0B2;}
+  .pron-conc-grid{display:grid; grid-template-columns:1fr 1fr; gap:22px;} @media (max-width:760px){.pron-conc-grid{grid-template-columns:1fr;}}
+  .pron-conc-row{display:flex; align-items:center; gap:10px; margin-top:9px; font-size:16.5px; font-weight:700; color:#fff;}
+  .pron-conc-row .n{width:42%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;} .pron-conc-row .b{flex:1; height:9px; border-radius:5px; background:rgba(130,150,255,.15); overflow:hidden;} .pron-conc-row .b i{display:block; height:100%; border-radius:5px;} .pron-conc-row .p{width:46px; text-align:right;}
+  .pron-aud-chips{display:flex; flex-wrap:wrap; gap:8px;}
+  .pron-aud-chip{background:rgba(218,15,72,.1); border:1px solid rgba(218,15,72,.45); color:#FFC2D2; border-radius:999px; padding:7px 14px; font-family:inherit; font-size:15.5px; font-weight:700; cursor:pointer;} .pron-aud-chip b{color:#fff; margin-left:4px;} .pron-aud-chip.activo,.pron-aud-chip:hover{background:rgba(218,15,72,.25);}
+  .pron-aud-warn{border-color:rgba(218,15,72,.4);}
+  .pron-metas-btn{width:auto !important; padding:0 12px; font-size:14.5px !important; font-weight:800; letter-spacing:.1em; text-transform:uppercase; font-family:inherit; margin-right:6px;}
+  .pron-metaform{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:14px;}
+  .pron-metaform label{display:flex; flex-direction:column; gap:5px; font-size:14.5px; font-weight:700; letter-spacing:.08em; color:#A9B6FF; text-transform:uppercase;}
+  .pron-metaform input{background:rgba(255,255,255,.07); border:1px solid rgba(130,150,255,.4); color:#fff; border-radius:8px; padding:9px 12px; font-size:17px; font-family:inherit; width:190px;}
   .pron-sec{margin-top:18px;}
   .pron-sec h3{margin:0 0 10px; font-size:16.5px; font-weight:800; letter-spacing:.16em; color:#A9B6FF; text-transform:uppercase;}
   .pron-row{display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; cursor:pointer; border:1px solid transparent; transition:background .12s, border-color .12s;}
@@ -1010,6 +1040,7 @@ async function saveMaterialesPorTipo(){
   try{ await storageSet('taller-materiales-por-tipo', JSON.stringify(materialesPorTipo)); }
   catch(e){ /* no bloquea el flujo principal */ }
 }
+let CONC_MAX = 0.4;
 let META_MIN = 75000;
 let META_MAX = 99000;
 
@@ -1385,6 +1416,7 @@ async function loadItems(){
         const m = JSON.parse(metasRes.value);
         if(m.min) nuevoMetaMin = m.min;
         if(m.max) nuevoMetaMax = m.max;
+        if(m.conc) CONC_MAX = m.conc;
       }
       cargado = true;
     }catch(e){
@@ -1423,11 +1455,12 @@ async function loadItems(){
   showApp();
   render();
   checkOpReminderDiario();
+  pronGuardarSnapshot();
   purgarPapeleraVencida();
   checkRecordatorioRespaldo();
 }
 async function saveMetas(){
-  try{ await storageSet('taller-metas', JSON.stringify({min:META_MIN, max:META_MAX})); }
+  try{ await storageSet('taller-metas', JSON.stringify({min:META_MIN, max:META_MAX, conc:CONC_MAX})); }
   catch(e){ /* no bloquea el flujo principal */ }
 }
 async function saveProcesosExtra(){
@@ -1611,7 +1644,7 @@ function exportBackup(){
     materialesExtra: materialesExtra,
     procesosPorTipo: procesosPorTipo,
     materialesPorTipo: materialesPorTipo,
-    metas: {min: META_MIN, max: META_MAX}
+    metas: {min: META_MIN, max: META_MAX, conc: CONC_MAX}
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -1652,7 +1685,7 @@ function handleImportFile(ev){
       materialesExtra = nuevosMateriales;
       procesosPorTipo = nuevosProcesosPorTipo || JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
       materialesPorTipo = nuevosMaterialesPorTipo || JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
-      if(nuevasMetas){ META_MIN = nuevasMetas.min || META_MIN; META_MAX = nuevasMetas.max || META_MAX; }
+      if(nuevasMetas){ META_MIN = nuevasMetas.min || META_MIN; META_MAX = nuevasMetas.max || META_MAX; CONC_MAX = nuevasMetas.conc || CONC_MAX; }
       saveItems();
       saveCategoriasExtra();
       saveProcesosExtra();
@@ -3478,7 +3511,7 @@ function renderResumenDiario(){
   const cotizados = cotizadosList.length;
   const aprobados = aprobadosList.length;
   const entregados = entregadosList.length;
-  const facturadosHoy = items.filter(it=>it.fechaFacturado===hoy || it.fechaPagoContado===hoy);
+  const facturadosHoy = facturadoEnRango(hoy, hoy).lista;
   const facturadoHoy = facturadosHoy.reduce((s,it)=>s+(Number(it.monto)||0),0);
   const facturadoCounter = facturadosHoy.filter(it=>it.tipoCliente==='counter').reduce((s,it)=>s+(Number(it.monto)||0),0);
   const facturadoCorporativa = facturadosHoy.filter(it=>it.tipoCliente==='corporativa').reduce((s,it)=>s+(Number(it.monto)||0),0);
@@ -3551,31 +3584,39 @@ function pronAvance(it){
   if(it.estado==='En proceso de diseño') return 20;
   return 10;
 }
-function pronCalcular(offset){
-  const {monday, sunday} = getWeekRange(offset);
-  const mDs = toDs(monday), sDs = toDs(sunday), hoy = todayStr();
-  const inRange = ds => ds && ds>=mDs && ds<=sDs;
-  const monto = it => Number(it.monto)||0;
-  const sum = l => l.reduce((s,it)=>s+monto(it),0);
-  // Facturado/cobrado en la semana: cierres (facturado o pagado) + abonos recibidos en la semana.
-  // Si el proyecto tuvo abonos, al cerrarse solo cuenta el saldo (los abonos ya se contaron en su fecha).
-  const porDia = [0,0,0,0,0,0,0];
-  const sumaDia = (ds,v)=>{ for(let i=0;i<7;i++){ const dd = new Date(monday); dd.setDate(monday.getDate()+i); if(toDs(dd)===ds){ porDia[i] += v; break; } } };
-  const realList = [];
+// Facturado/cobrado en un rango de fechas: cierres (facturado o pagado) + abonos recibidos en el rango.
+// Si el proyecto tuvo abonos, al cerrarse solo cuenta el saldo (los abonos ya se contaron en su fecha).
+// Lo usan el Pronóstico y todos los resúmenes, para que los números coincidan.
+function facturadoEnRango(d0, d1){
+  const inR = ds => ds && ds>=d0 && ds<=d1;
+  const lista = [], eventos = [];
   items.forEach(it=>{
     if(it.papelera) return;
     const abonos = it.abonos||[];
     const abTot = abonos.reduce((s,a)=>s+(Number(a.monto)||0),0);
-    const cierreDs = inRange(it.fechaFacturado) ? it.fechaFacturado : (inRange(it.fechaPagoContado) ? it.fechaPagoContado : null);
-    const abSem = abonos.filter(a=>inRange(a.fecha));
+    const cierreDs = inR(it.fechaFacturado) ? it.fechaFacturado : (inR(it.fechaPagoContado) ? it.fechaPagoContado : null);
+    const abSem = abonos.filter(a=>inR(a.fecha));
     if(!cierreDs && !abSem.length) return;
     let aporte = 0;
-    if(cierreDs){ const v = Math.max(0, monto(it)-abTot); aporte += v; sumaDia(cierreDs, v); }
-    abSem.forEach(a=>{ const v = Number(a.monto)||0; aporte += v; sumaDia(a.fecha, v); });
+    if(cierreDs){ const v = Math.max(0,(Number(it.monto)||0)-abTot); aporte += v; eventos.push({ds:cierreDs, v}); }
+    abSem.forEach(a=>{ const v = Number(a.monto)||0; aporte += v; eventos.push({ds:a.fecha, v}); });
     const tag = !cierreDs ? 'Abono' : (abTot>0 ? 'Saldo final' : '');
-    realList.push(Object.assign({}, it, {monto: aporte, _tag: tag}));
+    lista.push(Object.assign({}, it, {monto: aporte, _tag: tag}));
   });
-  const R = {monday, sunday, mDs, sDs, hoy, offset, realList, real:sum(realList), porDia, listo:[], camino:[], riesgo:[], fuera:[], potencial:[], sinMonto:[], huerfanos:[]};
+  return {lista, eventos};
+}
+function pronCalcular(offset){
+  const {monday, sunday} = getWeekRange(offset);
+  const mDs = toDs(monday), sDs = toDs(sunday), hoy = todayStr();
+  const nxt = getWeekRange(offset+1), nextM = toDs(nxt.monday), nextS = toDs(nxt.sunday);
+  const inRange = ds => ds && ds>=mDs && ds<=sDs;
+  const monto = it => Number(it.monto)||0;
+  const sum = l => l.reduce((s,it)=>s+monto(it),0);
+  const porDia = [0,0,0,0,0,0,0];
+  const fr = facturadoEnRango(mDs, sDs);
+  const realList = fr.lista;
+  fr.eventos.forEach(ev=>{ for(let i=0;i<7;i++){ const dd = new Date(monday); dd.setDate(monday.getDate()+i); if(toDs(dd)===ev.ds){ porDia[i] += ev.v; break; } } });
+  const R = {monday, sunday, mDs, sDs, hoy, offset, realList, real:sum(realList), porDia, listo:[], camino:[], riesgo:[], fuera:[], potencial:[], sinMonto:[], huerfanos:[], proxima:[]};
   if(offset !== 0) return R;
   const vivos = items.filter(it=>!it.papelera).map(it=>{
     const ab = (it.abonos||[]).reduce((s,a)=>s+(Number(a.monto)||0),0);
@@ -3598,23 +3639,38 @@ function pronCalcular(offset){
       return;
     }
     if(it.archivado || yaCobrado(it)) return;
-    const esProd = enProd.includes(it.estado), esAprob = it.estado==='Aprobado';
-    if(!esProd && !esAprob) return;
+    const esAprob = it.estado==='Aprobado' || it.estado==='Pendiente';   // por iniciar
+    const esProd = !esAprob;                                               // cualquier otro estado vivo cuenta como producción
     if(monto(it)<=0){ R.sinMonto.push(it); return; }
     const vencido = it.fechaLimite && hoy > it.fechaLimite;
     if(it.pausado || vencido){ R.riesgo.push(it); return; }
-    if(esAprob || (it.fechaLimite && it.fechaLimite > sDs)){ R.fuera.push(it); return; }
+    if(esAprob || (it.fechaLimite && it.fechaLimite > sDs)){
+      (it.fechaLimite && it.fechaLimite>=nextM && it.fechaLimite<=nextS ? R.proxima : R.fuera).push(it); return;
+    }
     R.camino.push(it);
   });
   return R;
 }
 function openPronostico(){
-  pronOffset = 0; pronDrill = null;
+  pronOffset = 0; pronDrill = null; pronEditMetas = false;
   document.getElementById('overlay-pronostico').classList.add('open');
   renderPronostico();
+  if(!pronSnaps) pronGuardarSnapshot().then(()=>{ if(document.getElementById('overlay-pronostico').classList.contains('open')) renderPronostico(true); });
 }
 function closePronostico(){ document.getElementById('overlay-pronostico').classList.remove('open'); }
 function navPronostico(d){ pronOffset = Math.min(0, pronOffset + d); pronDrill = null; renderPronostico(); }
+let pronEditMetas = false;
+const CONC_MAX_DEFAULT = 0.4;
+function pronToggleMetas(){ pronEditMetas = !pronEditMetas; renderPronostico(true); }
+function pronGuardarMetas(){
+  const num = id => parseFloat(String(document.getElementById(id).value).replace(/[,$\s]/g,''));
+  const mn = num('pm-min'), mx = num('pm-max'), cp = num('pm-conc');
+  if(isNaN(mn) || isNaN(mx) || mn<=0 || mx<mn){ showAlert('Los valores no son válidos. La meta mínima debe ser mayor a 0 y la máxima mayor o igual a la mínima.'); return; }
+  if(isNaN(cp) || cp<=0 || cp>100){ showAlert('La alerta de dependencia debe ser un porcentaje entre 1 y 100.'); return; }
+  META_MIN = mn; META_MAX = mx; CONC_MAX = cp/100;
+  pronEditMetas = false; saveMetas(); renderPronostico(true);
+}
+function pronGoWeek(o){ pronOffset = Math.min(0,o); pronDrill = null; renderPronostico(); }
 function togglePronDrill(k){ pronDrill = (pronDrill===k) ? null : k; renderPronostico(true); }
 function pronOpen(id){ closePronostico(); openModal(id); }
 function pronRowHtml(it, i, extra){
@@ -3622,15 +3678,69 @@ function pronRowHtml(it, i, extra){
     <span class="rk">${i}</span>
     <span class="nm"><b>${it.cliente}</b><span>${it.descripcion||'—'} · ${estadoTxt(it.estado, it)}${it.pausado?' · Pausado':''}${it.fechaLimite?' · Límite '+fmtDate(it.fechaLimite):''}${it._tag?' · '+it._tag:''}${it._saldo?' · Saldo (abonó '+pronMoney(it._abonado)+')':''}</span></span>
     ${extra||''}
-    <span class="mt">${pronMoney(it.monto)}</span>
+    <span class="mt">${(it._aud && !(Number(it.monto)>0)) ? '<span style="color:#FF8FAE">Sin monto</span>' : pronMoney(it.monto)}</span>
   </div>`;
+}
+// ---- Control de proyectos: nada queda huérfano ----
+const AUD_NOMBRES = {
+  a_sinmonto:'Sin monto', a_sinfecha:'Facturado o pagado sin fecha', a_sincobrar:'Entregados sin facturar o cobrar',
+  a_archivado:'Archivados sin cerrar', a_estancado:'Sin movimiento hace más de 30 días', a_sintipo:'Sin tipo de cliente', a_estado:'Estado desconocido'
+};
+function pronAuditoria(){
+  const esCot = it => ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO;
+  const dias = ds => ds ? Math.floor((new Date(todayStr()+'T00:00:00') - new Date(ds+'T00:00:00'))/86400000) : null;
+  const A = {}; Object.keys(AUD_NOMBRES).forEach(k=>A[k]=[]);
+  const flagged = new Set();
+  const vivos = items.filter(it=>!it.papelera);
+  const add = (k,it,tag)=>{ A[k].push(Object.assign({}, it, {_tag:tag, _aud:true})); flagged.add(it.id); };
+  vivos.forEach(it=>{
+    const monto = Number(it.monto)||0;
+    if(!ALL_ESTADOS.includes(it.estado)){ add('a_estado',it,'Estado: '+(it.estado||'vacío')); return; }
+    if(esCot(it)) return;
+    if(monto<=0) add('a_sinmonto',it,'');
+    if(it.facturado && !it.fechaFacturado) add('a_sinfecha',it,'Facturado sin fecha de factura');
+    if(it.pagoContado && !it.fechaPagoContado) add('a_sinfecha',it,'Pagado sin fecha de pago');
+    const cobrado = it.tipoCliente==='counter' ? !!it.pagoContado : !!it.facturado;
+    if(CERRADOS.includes(it.estado) && !cobrado && monto>0){
+      const d = dias(it.fechaCerrado || it.fechaUltimoCambio);
+      if(it.archivado) add('a_sincobrar',it,'Archivado sin '+(it.tipoCliente==='counter'?'cobrar':'facturar'));
+      else if(d!==null && d>30) add('a_sincobrar',it,'Entregado hace '+d+' días sin '+(it.tipoCliente==='counter'?'cobrar':'facturar'));
+    }
+    if(it.archivado && !CERRADOS.includes(it.estado)) add('a_archivado',it,'Archivado en estado '+estadoTxt(it.estado,it));
+    if(!it.archivado && ['En proceso','En proceso de diseño','En producción','Completado','Listo para entrega'].includes(it.estado)){
+      const d = dias(it.fechaUltimoCambio); if(d!==null && d>30) add('a_estancado',it,'Sin cambios hace '+d+' días');
+    }
+    if(!it.tipoCliente) add('a_sintipo',it,'');
+  });
+  return {A, total:vivos.length, pendientes:flagged.size, enRegla:vivos.length-flagged.size};
+}
+
+// ---- Pronóstico guardado al abrir cada semana, para compararlo con lo real ----
+let pronSnaps = null;
+async function pronCargarSnaps(){
+  if(pronSnaps) return pronSnaps;
+  try{ const r = await storageGet('taller-pronosticos'); pronSnaps = (r && r.value) ? JSON.parse(r.value) : {}; }
+  catch(e){ pronSnaps = {}; }
+  return pronSnaps;
+}
+async function pronGuardarSnapshot(){
+  try{
+    if(offlineFallbackActivo || !items.length) return;
+    await pronCargarSnaps();
+    const k = toDs(getWeekRange(0).monday);
+    if(pronSnaps[k]) return;
+    const R = pronCalcular(0);
+    const sm = l => l.reduce((a,it)=>a+(Number(it.monto)||0),0);
+    pronSnaps[k] = {proy: R.real + sm(R.listo) + sm(R.camino), ts: new Date().toISOString()};
+    await storageSet('taller-pronosticos', JSON.stringify(pronSnaps));
+  }catch(e){ console.warn('snapshot pronóstico', e); }
 }
 function renderPronostico(soloDetalle){
   const R = pronCalcular(pronOffset);
   const actual = pronOffset===0;
   const monto = it => Number(it.monto)||0;
   const sum = l => l.reduce((s,it)=>s+monto(it),0);
-  const vListo = sum(R.listo), vCamino = sum(R.camino), vRiesgo = sum(R.riesgo), vFuera = sum(R.fuera), vPot = sum(R.potencial);
+  const vListo = sum(R.listo), vCamino = sum(R.camino), vRiesgo = sum(R.riesgo), vFuera = sum(R.fuera), vProx = sum(R.proxima), vPot = sum(R.potencial);
   const pronostico = R.real + vListo + vCamino;
   const escala = Math.max(META_MAX*1.12, (pronostico+vRiesgo)*1.03, 1);
   const f = v => Math.max(0, Math.min(1, v/escala));
@@ -3667,6 +3777,8 @@ function renderPronostico(soloDetalle){
       (faltaMin>0 ? `Para la meta mínima faltan <b>${pronMoney(faltaMin)}</b>.` : (faltaMax>0 ? `La mínima está cubierta; para la máxima faltan <b>${pronMoney(faltaMax)}</b>.` : `La meta máxima está cubierta.`));
   } else {
     titular = `Semana cerrada: se facturaron <b>${pronMoney(R.real)}</b>, ` + (R.real>=META_MIN ? 'meta mínima alcanzada.' : `<b>${pronMoney(faltaMin)}</b> por debajo de la mínima.`);
+    const sn0 = pronSnaps && pronSnaps[toDs(R.monday)];
+    if(sn0 && sn0.proy>0) titular += ` Al abrir la semana se proyectaban <b>${pronMoney(sn0.proy)}</b> (cerró en <b>${Math.round(R.real/sn0.proy*100)}%</b> de lo proyectado).`;
   }
 
   // ----- Barra apilada -----
@@ -3696,9 +3808,10 @@ function renderPronostico(soloDetalle){
     ${actual ? tile('listo','#00A9C1','Listo para facturar',vListo,R.listo.length+' entregados sin facturar/cobrar')
     + tile('camino','#8392FF','En camino',vCamino,R.camino.length+' en producción')
     + tile('riesgo','#DA0F48','En riesgo',vRiesgo,R.riesgo.length+' vencidos o pausados')
-    + tile('fuera','#5A66C9','Fuera de esta semana',vFuera,R.fuera.length+' aprobados o con límite posterior') : ''}
+    + tile('proxima','#4F9DFF','Próxima semana',vProx,R.proxima.length+' con límite la semana siguiente')
+    + tile('fuera','#5A66C9','Más adelante',vFuera,R.fuera.length+' por iniciar o con límite posterior') : ''}
   </div>`;
-  const nombres = {real:'Facturado en la semana', listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Fuera de esta semana'};
+  const nombres = {real:'Facturado en la semana', listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Más adelante: por iniciar o con límite posterior', proxima:'Próxima semana'};
   let drill = '';
   if(pronDrill && nombres[pronDrill]){
     const l = (pronDrill==='real' ? R.realList : R[pronDrill])||[];
@@ -3706,13 +3819,101 @@ function renderPronostico(soloDetalle){
     drill = `<div class="pron-card pron-sec"><h3 style="margin-top:0">${nombres[pronDrill]} · ${l.length}</h3>${orden.length ? orden.map((it,i)=>pronRowHtml(it,i+1)).join('') : '<div class="pron-empty">Nada en esta categoría.</div>'}</div>`;
   }
 
-  // ----- Potencial (tabla secundaria horizontal, no suma) -----
+  const diasDesde = ds => ds ? Math.floor((new Date(todayStr()+'T00:00:00') - new Date(ds+'T00:00:00'))/86400000) : null;
+
+  // ----- Tendencia: últimas 8 semanas -----
+  const R0 = actual ? R : pronCalcular(0);
+  const pron0 = R0.real + sum(R0.listo) + sum(R0.camino);
+  const semanas = [-7,-6,-5,-4,-3,-2,-1,0].map(o=>{
+    const r = o===0 ? R0 : pronCalcular(o);
+    const k = toDs(r.monday);
+    return {o, k, mon:r.monday, real:r.real, snap:(pronSnaps&&pronSnaps[k])?pronSnaps[k].proy:null};
+  });
+  const escT = Math.max(META_MAX*1.1, pron0, ...semanas.map(w=>w.real), ...semanas.map(w=>w.snap||0), 1);
+  const hT = v => Math.min(100, Math.max(0,v/escT*100)).toFixed(1)+'%';
+  const cols = semanas.map(w=>{
+    const cumple = w.real>=META_MIN;
+    const proj = (w.o===0 && pron0>w.real) ? `<div class="bar proj" style="height:${hT(pron0)}" title="Proyectado: ${pronMoney(pron0)}"></div>` : '';
+    const snapT = (w.snap!==null && w.o<0) ? `<div class="snap" style="bottom:${hT(w.snap)}" title="Proyectado al abrir la semana: ${pronMoney(w.snap)}"></div>` : '';
+    const lbl = w.mon.toLocaleDateString('es',{day:'numeric',month:'short'});
+    return `<div class="pron-wk ${w.o===pronOffset?'sel':''}" onclick="pronGoWeek(${w.o})" title="Semana del ${lbl}: ${pronMoney(w.real)}">
+      <div class="pron-wk-col">${proj}<div class="bar ${cumple?'ok':'no'}" style="height:${hT(w.real)}"></div>${snapT}<div class="val" style="bottom:calc(${hT(Math.max(w.real, w.o===0?pron0:0))} + 3px)">${pronMoney(w.real)}</div></div>
+      <div class="lbl">${w.o===0?'Esta sem.':lbl}</div></div>`;
+  }).join('');
+  const cerradas = semanas.filter(w=>w.o<0);
+  const cumplidas = cerradas.filter(w=>w.real>=META_MIN).length;
+  const promSem = cerradas.reduce((a,w)=>a+w.real,0)/cerradas.length;
+  const medidas = cerradas.filter(w=>w.snap>0);
+  const precision = medidas.length ? Math.round(medidas.reduce((a,w)=>a+w.real,0)/medidas.reduce((a,w)=>a+w.snap,0)*100) : null;
+  const tendencia = `<div class="pron-card pron-sec">
+    <h3 style="margin-top:0">Tendencia · últimas 8 semanas <span style="font-weight:600; letter-spacing:.08em; color:#B4BDEB;">(toca una semana para verla)</span></h3>
+    <div class="pron-wk-area">
+      <div class="pron-wk-lines"><div class="mline" style="bottom:${hT(META_MIN)}"><span>MÍN ${pronMoney(META_MIN)}</span></div>
+      <div class="mline mx" style="bottom:${hT(META_MAX)}"><span>MÁX ${pronMoney(META_MAX)}</span></div></div>
+      <div class="pron-wk-row">${cols}</div>
+    </div>
+    <div class="pron-trend-stats">
+      <span>Meta mínima cumplida en <b>${cumplidas} de ${cerradas.length}</b> semanas cerradas</span>
+      <span>Promedio semanal: <b>${pronMoney(promSem)}</b></span>
+      <span style="color:#B4BDEB;">Raya blanca = lo proyectado al abrir esa semana</span>
+      <span>${precision!==null ? `Precisión del pronóstico: cierras en promedio el <b>${precision}%</b> de lo proyectado (${medidas.length} ${medidas.length>1?'semanas medidas':'semana medida'})` : 'Precisión del pronóstico: se empieza a medir esta semana (el sistema guarda la proyección al abrir cada semana y la compara con lo facturado)'}</span>
+    </div>
+  </div>`;
+
+  // ----- Potencial: conversión de cotizaciones -----
   let potencial = '';
   if(actual){
-    const lp = [...R.potencial].sort((a,b)=>monto(b)-monto(a));
+    const cots = items.filter(it=>!it.papelera && it.origen==='cotizacion');
+    const decididas = cots.filter(it=>it.estado===ESTADO_RECHAZADO || !ESTADOS_COTIZACION.includes(it.estado));
+    const aprobadas = decididas.filter(it=>it.estado!==ESTADO_RECHAZADO);
+    const tasa = decididas.length ? aprobadas.length/decididas.length : null;
+    const lp = R.potencial.map(it=>Object.assign({}, it, {_dias: diasDesde(it.fechaCotizado)}))
+      .sort((a,b)=>(b._dias||0)-(a._dias||0) || monto(b)-monto(a));
+    const seguim = lp.filter(it=>it._dias!==null && it._dias>7);
+    const esperado = tasa!==null ? vPot*tasa : null;
     potencial = `<div class="pron-card pron-sec pron-pot">
       <h3 style="margin-top:0">Potencial: cotizaciones enviadas sin respuesta · ${lp.length} · ${pronMoney(vPot)} <span style="font-weight:600; letter-spacing:.08em; color:#B4BDEB;">(no suman al pronóstico)</span></h3>
-      ${lp.length ? `<div class="pron-pot-grid">${lp.map(it=>`<div class="pron-pot-item" onclick="pronOpen('${it.id}')"><b>${it.cliente}</b><span>${it.descripcion||''}</span><em>${monto(it)?pronMoney(monto(it)):'Sin monto'}</em></div>`).join('')}</div>` : '<div class="pron-empty">No hay cotizaciones enviadas pendientes.</div>'}
+      <div class="pron-trend-stats" style="margin:0 0 10px;">
+        <span>Tasa de aprobación: <b>${tasa!==null ? Math.round(tasa*100)+'%' : 'sin datos'}</b>${decididas.length ? ` (${aprobadas.length} aprobadas de ${decididas.length} decididas${decididas.length<8?' · pocas aún, tómalo como referencia':''})` : ''}</span>
+        ${esperado!==null ? `<span>Valor esperado: <b style="color:#FDC901">${pronMoney(esperado)}</b></span>` : ''}
+        <span>${seguim.length ? `<b style="color:#FF8FAE">${seguim.length} para dar seguimiento</b> (más de 7 días sin respuesta)` : 'Ninguna lleva más de 7 días sin respuesta'}</span>
+      </div>
+      ${lp.length ? `<div class="pron-pot-grid">${lp.map(it=>`<div class="pron-pot-item ${it._dias>7?'seg':''}" onclick="pronOpen('${it.id}')"><b>${it.cliente}</b><span>${it.descripcion||''}</span><em>${monto(it)?pronMoney(monto(it)):'Sin monto'}</em>${it._dias!==null?`<small>${it._dias>7?'Dar seguimiento · ':''}enviada hace ${it._dias} ${it._dias===1?'día':'días'}</small>`:''}</div>`).join('')}</div>` : '<div class="pron-empty">No hay cotizaciones enviadas pendientes.</div>'}
+    </div>`;
+  }
+
+  // ----- Dependencia de clientes -----
+  const concBloque = (titulo, lista, getV)=>{
+    const m = {}; let tot = 0;
+    lista.forEach(it=>{ const v = getV(it); if(v<=0) return; const c = (it.cliente||'SIN CLIENTE').trim().toUpperCase(); m[c]=(m[c]||0)+v; tot+=v; });
+    const top = Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    if(!tot) return `<div class="pron-conc"><div class="pron-lbl">${titulo}</div><div class="pron-empty" style="padding:8px 0; text-align:left;">Sin datos todavía.</div></div>`;
+    const alerta = top[0][1]/tot > CONC_MAX;
+    return `<div class="pron-conc"><div class="pron-lbl">${titulo}</div>
+      ${top.map(([c,v],i)=>{ const p = v/tot*100; const rojo = i===0 && alerta; return `<div class="pron-conc-row"><span class="n">${c}</span><span class="b"><i style="width:${p.toFixed(0)}%; background:${rojo?'#DA0F48':'#8392FF'}"></i></span><span class="p" style="${rojo?'color:#FF8FAE':''}">${p.toFixed(0)}%</span></div>`; }).join('')}
+      ${alerta ? `<div class="pron-warn" style="margin-top:8px;">${top[0][0]} concentra el <b>${Math.round(top[0][1]/tot*100)}%</b> (el límite de alerta es ${Math.round(CONC_MAX*100)}%). Depender tanto de un cliente es un riesgo.</div>` : ''}
+    </div>`;
+  };
+  const ult8 = facturadoEnRango(toDs(getWeekRange(-7).monday), toDs(getWeekRange(0).sunday)).lista;
+  const pipeline = [...R0.listo, ...R0.camino, ...R0.riesgo, ...R0.proxima, ...R0.fuera];
+  const concentracion = `<div class="pron-card pron-sec"><h3 style="margin-top:0">Dependencia de clientes</h3>
+    <div class="pron-conc-grid">${concBloque('Lo facturado · últimas 8 semanas', ult8, it=>Number(it.monto)||0)}${concBloque('Lo que viene · trabajo en curso y por iniciar', pipeline, it=>Number(it.monto)||0)}</div></div>`;
+
+  // ----- Control de proyectos: que nada quede huérfano -----
+  let control = '';
+  if(actual){
+    const AU = pronAuditoria();
+    const claves = Object.keys(AUD_NOMBRES).filter(k=>AU.A[k].length);
+    const chips = claves.map(k=>`<button type="button" class="pron-aud-chip ${pronDrill===k?'activo':''}" onclick="togglePronDrill('${k}')">${AUD_NOMBRES[k]} <b>${AU.A[k].length}</b></button>`).join('');
+    let lista = '';
+    if(pronDrill && AU.A[pronDrill]){
+      const l = [...AU.A[pronDrill]].sort((a,b)=>(Number(b.monto)||0)-(Number(a.monto)||0));
+      lista = `<div style="margin-top:12px;">${l.map((it,i)=>pronRowHtml(it,i+1)).join('')}</div>`;
+    }
+    control = `<div class="pron-card pron-sec ${AU.pendientes?'pron-aud-warn':''}">
+      <h3 style="margin-top:0">Control de proyectos · ${AU.total} registrados · ${AU.enRegla} en regla · ${AU.pendientes} por completar</h3>
+      ${claves.length ? `<div class="pron-aud-chips">${chips}</div><div class="pron-foot" style="margin-top:10px;">Estos proyectos no entran bien en el pronóstico o en los resúmenes (sin monto, sin fecha, olvidados o sin cerrar). Ábrelos y complétalos para que nada quede fuera.</div>${lista}`
+        : '<div class="pron-empty" style="text-align:left;">Todos los proyectos tienen monto, fechas y estado coherentes. Nada está huérfano.</div>'}
     </div>`;
   }
 
@@ -3739,16 +3940,19 @@ function renderPronostico(soloDetalle){
     ruta = `<div class="pron-card pron-sec"><h3 style="margin-top:0">Ruta a la meta · cierra en este orden</h3>${filas}</div>`;
   }
 
-  // ----- Avisos -----
-  const aviso = (actual && R.sinMonto.length) ? `<div class="pron-warn">${R.sinMonto.length} proyecto${R.sinMonto.length>1?'s':''} sin monto no se suma${R.sinMonto.length>1?'n':''} al pronóstico: ` + R.sinMonto.slice(0,6).map(it=>`<a onclick="pronOpen('${it.id}')">${it.cliente}${it.descripcion?' — '+it.descripcion:''}</a>`).join(' · ') + (R.sinMonto.length>6?' …':'') + '</div>' : '';
-
-  const avisoHuerf = (actual && R.huerfanos.length) ? `<div class="pron-warn" style="background:rgba(131,146,255,.07); border-color:rgba(131,146,255,.4); color:#C9D0FF;">${R.huerfanos.length} proyecto${R.huerfanos.length>1?'s':''} entregado${R.huerfanos.length>1?'s':''} y archivado${R.huerfanos.length>1?'s':''} nunca se marcó${R.huerfanos.length>1?'aron':''} como facturado${R.huerfanos.length>1?'s':''} o cobrado${R.huerfanos.length>1?'s':''} (<b>${pronMoney(sum(R.huerfanos))}</b>). No cuentan en el pronóstico; si alguno quedó sin facturar, ábrelo: ` + R.huerfanos.slice(0,6).map(it=>`<a onclick="pronOpen('${it.id}')">${it.cliente}${it.descripcion?' — '+it.descripcion:''}</a>`).join(' · ') + (R.huerfanos.length>6?' …':'') + '</div>' : '';
   document.getElementById('pron-body').className = soloDetalle ? 'pron-noanim' : '';
   document.getElementById('pron-body').innerHTML = `
     <div class="pron-head">
       <h2 class="pron-title"><span class="pron-live"></span>Pronóstico de facturación</h2>
-      <div class="pron-nav"><button onclick="navPronostico(-1)">&#9664;</button><span>${weekLabelFor(R.monday, R.sunday)}${actual?' · esta semana':''}</span><button onclick="navPronostico(1)" ${actual?'disabled':''}>&#9654;</button></div>
+      <div class="pron-nav"><button class="pron-metas-btn" onclick="pronToggleMetas()" title="Editar metas">&#9998; Metas</button><button onclick="navPronostico(-1)">&#9664;</button><span>${weekLabelFor(R.monday, R.sunday)}${actual?' · esta semana':''}</span><button onclick="navPronostico(1)" ${actual?'disabled':''}>&#9654;</button></div>
     </div>
+    ${pronEditMetas ? `<div class="pron-card pron-metaform">
+      <label>Meta mínima semanal ($)<input id="pm-min" type="text" inputmode="decimal" value="${META_MIN.toLocaleString('en-US')}" style="text-transform:none;"></label>
+      <label>Meta máxima semanal ($)<input id="pm-max" type="text" inputmode="decimal" value="${META_MAX.toLocaleString('en-US')}" style="text-transform:none;"></label>
+      <label>Alerta de dependencia de un cliente (%)<input id="pm-conc" type="text" inputmode="decimal" value="${Math.round(CONC_MAX*100)}" style="text-transform:none;"></label>
+      <button type="button" class="pron-close" onclick="pronGuardarMetas()">Guardar</button>
+      <button type="button" class="pron-close" onclick="pronToggleMetas()">Cancelar</button>
+    </div>` : ''}
     <div class="pron-top">
       <div class="pron-card pron-gauge">
         <div class="pron-lbl" style="text-align:left;">${actual?'Proyección de la semana':'Facturado en la semana'}</div>
@@ -3765,10 +3969,11 @@ function renderPronostico(soloDetalle){
     </div>
     ${tiles}
     ${drill}
+    ${tendencia}
     ${ruta}
     ${potencial}
-    ${aviso}
-    ${avisoHuerf}
+    ${concentracion}
+    ${control}
     <div class="pron-foot">Pronóstico de <b>facturación</b>, no de cobro: lo facturado a crédito se cobra días después (eso se sigue en el sistema financiero). “En camino” incluye todo lo que está en producción, salvo lo que tiene fecha límite posterior a esta semana. Las cotizaciones enviadas se muestran como potencial y no suman.</div>
     <div class="modal-actions" style="margin-top:14px; display:flex; justify-content:flex-end;"><button class="pron-close" onclick="closePronostico()">Cerrar</button></div>`;
 }
@@ -3794,7 +3999,7 @@ function renderResumen(){
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
   const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
   const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
-  const facturadoList = items.filter(it=>inRange(it.fechaFacturado) || inRange(it.fechaPagoContado));
+  const facturadoList = facturadoEnRango(mondayDs, sundayDs).lista;
   const cotizados = cotizadosList.length;
   const aprobados = aprobadosList.length;
   const cerrados = cerradosList.length;
@@ -3893,7 +4098,7 @@ function renderResumenMensual(){
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
   const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
   const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
-  const facturadoList = items.filter(it=>inRange(it.fechaFacturado) || inRange(it.fechaPagoContado));
+  const facturadoList = facturadoEnRango(firstDs, lastDs).lista;
   const opCompletadasList = items.filter(it=>!it.papelera && opTieneContenido(it.ordenProduccion) && opEstaCompletada(it) && inRange(opFechaCompletada(it)));
   const cotizados = cotizadosList.length;
   const aprobados = aprobadosList.length;

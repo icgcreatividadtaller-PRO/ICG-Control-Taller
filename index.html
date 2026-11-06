@@ -254,7 +254,9 @@
   .empty-state .big{font-size:15px; font-weight:800; color:var(--brand); margin-bottom:4px;}
   .hist-row{display:flex; justify-content:space-between; align-items:center; padding:10px 4px; border-bottom:1px solid var(--border); font-size:12px;}
   .hist-row:last-child{border-bottom:none;}
-  .hist-time{color:var(--ink-3); font-weight:700; font-size:11px;}
+  .hist-time{color:var(--ink-3); font-weight:700; font-size:11px; white-space:nowrap;}
+  .hist-click{cursor:pointer; border-radius:6px; transition:background .12s;}
+  .hist-click:hover{background:var(--neutral-bg);}
 
 
   .autosave-badge{
@@ -315,6 +317,78 @@
     .mobile-menu-btn{display:flex;}
   }
 
+  /* ===== Pronóstico de facturación ===== */
+  #overlay-pronostico{background:rgba(3,5,20,.78);}
+  .pron-modal{max-width:1040px; position:relative; overflow:hidden; padding:26px 30px 24px; color:#E7EAFF; border:1px solid rgba(130,150,255,.28); border-top:1px solid rgba(130,150,255,.28);
+    background:radial-gradient(ellipse 80% 50% at 30% 0%, #1c2278 0%, rgba(11,16,51,0) 70%), linear-gradient(165deg,#0B1033 0%,#0A0F3C 55%,#060924 100%);
+    box-shadow:0 30px 90px rgba(0,0,12,.65), 0 0 70px rgba(70,90,255,.16); isolation:isolate; text-transform:none;}
+  .pron-modal::before{content:''; position:absolute; inset:0; z-index:-2; pointer-events:none;
+    background-image:linear-gradient(rgba(130,150,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(130,150,255,.05) 1px, transparent 1px); background-size:44px 44px;}
+  .pron-modal::after{content:''; position:absolute; top:0; bottom:0; right:-40px; width:260px; z-index:-1; pointer-events:none; opacity:.55;
+    background-image:var(--dna-img); background-repeat:repeat-y; background-size:260px 450px; background-position:center 0; animation:pron-dna 60s linear infinite;}
+  @keyframes pron-dna{from{background-position:center 0;} to{background-position:center 450px;}}
+  .pron-head{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;}
+  .pron-title{font-size:15px; font-weight:800; letter-spacing:.28em; color:#EEF0FF; text-transform:uppercase; display:flex; align-items:center; gap:10px; margin:0;}
+  .pron-live{width:8px; height:8px; border-radius:50%; background:#34E0A1; box-shadow:0 0 0 0 rgba(52,224,161,.6); animation:pron-pulse 2s infinite;}
+  @keyframes pron-pulse{0%{box-shadow:0 0 0 0 rgba(52,224,161,.55);} 70%{box-shadow:0 0 0 9px rgba(52,224,161,0);} 100%{box-shadow:0 0 0 0 rgba(52,224,161,0);}}
+  .pron-nav{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; letter-spacing:.12em; color:#8392FF; text-transform:uppercase;}
+  .pron-nav button{background:rgba(130,150,255,.1); border:1px solid rgba(130,150,255,.3); color:#CFD6FF; border-radius:6px; width:30px; height:28px; cursor:pointer; font-size:12px;}
+  .pron-nav button:hover:not(:disabled){background:rgba(130,150,255,.25);} .pron-nav button:disabled{opacity:.3; cursor:default;}
+  .pron-card{background:rgba(255,255,255,.035); border:1px solid rgba(130,150,255,.2); border-radius:14px; padding:16px 18px; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);}
+  .pron-lbl{font-size:10px; font-weight:700; letter-spacing:.24em; color:#8392FF; text-transform:uppercase;}
+  .pron-top{display:grid; grid-template-columns:minmax(300px,1.05fr) 1fr; gap:14px; align-items:stretch;}
+  .pron-gauge{text-align:center; position:relative;}
+  .pron-gauge svg{width:100%; max-width:360px; height:auto; overflow:visible;}
+  .pron-gauge .seg{fill:none; stroke-linecap:butt; stroke-dasharray:100; stroke-dashoffset:100; animation:pron-draw 1.3s cubic-bezier(.3,.7,.2,1) forwards;}
+  @keyframes pron-draw{to{stroke-dashoffset:0;}}
+  .pron-noanim .seg{animation:none; stroke-dashoffset:0;}
+  .pron-gauge .center{position:absolute; left:0; right:0; bottom:22px; pointer-events:none;}
+  .pron-big{font-size:38px; font-weight:800; color:#fff; line-height:1; letter-spacing:.01em; text-shadow:0 0 28px rgba(131,146,255,.65);}
+  .pron-sub{font-size:10.5px; color:#8A93C8; letter-spacing:.14em; margin-top:6px; text-transform:uppercase;}
+  .pron-status{display:inline-block; margin-top:10px; padding:5px 12px; border-radius:999px; font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase;}
+  .pron-status.ok{background:rgba(52,224,161,.14); color:#4DF0B2; border:1px solid rgba(52,224,161,.4);}
+  .pron-status.mid{background:rgba(253,201,1,.12); color:#FDC901; border:1px solid rgba(253,201,1,.4);}
+  .pron-status.low{background:rgba(218,15,72,.14); color:#FF6B92; border:1px solid rgba(218,15,72,.45);}
+  .pron-headline{font-size:13px; line-height:1.55; color:#C9D0FF; font-weight:500; margin:2px 0 14px;}
+  .pron-headline b{color:#fff;}
+  .pron-stack{position:relative; height:16px; border-radius:8px; background:rgba(130,150,255,.12); overflow:visible; margin:26px 0 18px;}
+  .pron-stack .s{position:absolute; top:0; bottom:0; transition:width .9s cubic-bezier(.3,.7,.2,1);}
+  .pron-stack .tick{position:absolute; top:-7px; bottom:-7px; width:2px; background:#fff; opacity:.85;}
+  .pron-stack .tick span{position:absolute; top:-15px; left:50%; transform:translateX(-50%); font-size:9px; font-weight:800; letter-spacing:.14em; color:#fff; white-space:nowrap;}
+  .pron-legend{display:grid; gap:8px;}
+  .pron-leg{display:flex; align-items:center; gap:10px; font-size:12px; color:#C9D0FF; font-weight:600;}
+  .pron-leg i{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
+  .pron-leg .n{margin-left:auto; color:#fff; font-weight:800;} .pron-leg .c{color:#7780B8; font-size:10.5px; font-weight:600; min-width:62px; text-align:right;}
+  .pron-days{display:flex; align-items:flex-end; gap:8px; height:84px; margin-top:6px;}
+  .pron-day{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:5px; font-size:9.5px; color:#7780B8; font-weight:700; letter-spacing:.1em;}
+  .pron-day .bar{width:100%; border-radius:4px 4px 2px 2px; background:rgba(130,150,255,.15); min-height:3px; transition:height .9s cubic-bezier(.3,.7,.2,1);}
+  .pron-day.real .bar{background:linear-gradient(180deg,#FDC901,#C79A00); box-shadow:0 0 14px rgba(253,201,1,.35);}
+  .pron-day.hoy{color:#fff;} .pron-day.hoy .bar{outline:1px solid rgba(255,255,255,.5); outline-offset:2px;}
+  .pron-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px;}
+  .pron-tile{cursor:pointer; position:relative; transition:transform .15s, border-color .15s, background .15s;}
+  .pron-tile:hover{transform:translateY(-2px); border-color:rgba(130,150,255,.5);}
+  .pron-tile.activo{border-color:#8392FF; background:rgba(131,146,255,.12);}
+  .pron-tile .v{font-size:21px; font-weight:800; color:#fff; margin:8px 0 3px; letter-spacing:.01em;}
+  .pron-tile .k{font-size:11px; color:#8A93C8; font-weight:600;}
+  .pron-tile .bar{position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:0 3px 3px 0;}
+  .pron-sec{margin-top:18px;}
+  .pron-sec h3{margin:0 0 10px; font-size:11px; font-weight:800; letter-spacing:.26em; color:#8392FF; text-transform:uppercase;}
+  .pron-row{display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; cursor:pointer; border:1px solid transparent; transition:background .12s, border-color .12s;}
+  .pron-row:hover{background:rgba(131,146,255,.1); border-color:rgba(130,150,255,.3);}
+  .pron-row .rk{width:22px; height:22px; border-radius:50%; background:rgba(131,146,255,.18); color:#CFD6FF; font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .pron-row .nm{flex:1; min-width:0;} .pron-row .nm b{display:block; font-size:12.5px; color:#fff; font-weight:700;} .pron-row .nm span{display:block; font-size:11px; color:#8A93C8; font-weight:500; margin-top:1px;}
+  .pron-row .av{width:70px; height:5px; border-radius:3px; background:rgba(130,150,255,.18); overflow:hidden; flex-shrink:0;} .pron-row .av i{display:block; height:100%; background:linear-gradient(90deg,#8392FF,#34E0A1);}
+  .pron-row .mt{font-size:12.5px; font-weight:800; color:#fff; min-width:84px; text-align:right;}
+  .pron-row .cum{font-size:10.5px; color:#7780B8; font-weight:700; min-width:92px; text-align:right;}
+  .pron-chip{display:inline-block; font-size:9px; font-weight:800; letter-spacing:.14em; padding:3px 8px; border-radius:999px; text-transform:uppercase; white-space:nowrap;}
+  .pron-chip.min{background:rgba(253,201,1,.16); color:#FDC901; border:1px solid rgba(253,201,1,.45);} .pron-chip.max{background:rgba(52,224,161,.16); color:#4DF0B2; border:1px solid rgba(52,224,161,.45);}
+  .pron-warn{margin-top:14px; padding:10px 14px; border-radius:10px; background:rgba(218,15,72,.08); border:1px dashed rgba(218,15,72,.4); color:#FFB0C5; font-size:11.5px; font-weight:600; line-height:1.5;}
+  .pron-warn a{color:#fff; text-decoration:underline; cursor:pointer;}
+  .pron-foot{margin-top:16px; font-size:10.5px; color:#6B74A8; line-height:1.5; font-weight:500;}
+  .pron-close{background:transparent; border:1px solid rgba(130,150,255,.4); color:#CFD6FF; border-radius:8px; padding:9px 22px; font-weight:800; letter-spacing:.12em; font-size:11px; cursor:pointer; text-transform:uppercase; font-family:inherit;}
+  .pron-close:hover{background:rgba(130,150,255,.16);}
+  .pron-empty{padding:14px; text-align:center; color:#7780B8; font-size:12px;}
+  @media (max-width:760px){ .pron-top{grid-template-columns:1fr;} .pron-modal{padding:20px 16px;} .pron-modal::after{display:none;} .pron-big{font-size:30px;} .pron-row .cum,.pron-row .av{display:none;} }
   /* ===== Portada (login + carga) ===== */
   .login-screen, .loading-screen{position:fixed; inset:0; z-index:1000; display:flex; padding:24px; overflow-y:auto; color:#fff; isolation:isolate;
     background:radial-gradient(ellipse 70% 55% at 50% 28%, #1c2278 0%, #0b1033 48%, #04061a 100%);}
@@ -465,6 +539,7 @@
     <div class="sidebar-tools">
       <div class="tool-btn resumen" onclick="openResumen()"><span class="icon">&#128202;</span> Resumen semanal</div>
       <div class="tool-btn resumen" onclick="openResumenMensual()"><span class="icon">&#128197;</span> Resumen mensual</div>
+      <div class="tool-btn resumen" onclick="openPronostico()"><span class="icon">&#128200;</span> Pronóstico</div>
       <div class="tool-btn" onclick="openResumenDiario()"><span class="icon">&#128197;</span> Resumen diario</div>
       <div class="tool-btn" onclick="exportBackup()"><span class="icon">&#8681;</span> Descargar respaldo</div>
       <div class="tool-btn" onclick="document.getElementById('import-file').click()"><span class="icon">&#8679;</span> Restaurar respaldo</div>
@@ -631,6 +706,12 @@
       <div></div>
       <button class="btn-ghost" onclick="closeResumen()">Cerrar</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-pronostico">
+  <div class="modal pron-modal">
+    <div id="pron-body"></div>
   </div>
 </div>
 
@@ -3342,7 +3423,7 @@ function renderResumenDiario(){
   let eventos = [];
   items.forEach(it=>{
     (it.historial||[]).forEach(h=>{
-      if(isTodayLocal(h.ts)) eventos.push({cliente:it.cliente, estado:h.estado, ts:h.ts});
+      if(isTodayLocal(h.ts)) eventos.push({id:it.id, cliente:it.cliente, descripcion:it.descripcion||'', estado:estadoTxt(h.estado, it), estadoRaw:h.estado, ts:h.ts});
     });
   });
   eventos.sort((a,b)=> new Date(b.ts) - new Date(a.ts));
@@ -3380,13 +3461,223 @@ function renderResumenDiario(){
     </div>
     <div style="font-weight:800; color:var(--brand); margin:18px 0 8px; font-size:13px;">Bitacora de hoy</div>
     ${eventos.length ? eventos.map(e=>`
-      <div class="hist-row">
+      <div class="hist-row hist-click" onclick="closeResumenDiario(); openModal('${e.id}')" title="Abrir proyecto">
         <span class="hist-time">${fmtDateTime(e.ts)}</span>
-        <b style="flex:1; text-align:left; margin:0 10px; font-size:12px;">${e.cliente}</b>
-        <span class="pill ${pillClassFor(e.estado)}">${e.estado}</span>
+        <span style="flex:1; text-align:left; margin:0 10px; min-width:0;">
+          <b style="display:block; font-size:12px;">${e.cliente}</b>
+          ${e.descripcion ? `<span style="display:block; font-size:11px; color:var(--ink-2); font-weight:500; margin-top:2px;">${e.descripcion}</span>` : ''}
+        </span>
+        <span class="pill ${pillClassFor(e.estadoRaw)}">${e.estado}</span>
       </div>`).join('')
     : '<div class="empty-state"><div class="big">Nada registrado hoy todavia</div>Cada movimiento que hagas va apareciendo aqui.</div>'}
   `;
+}
+
+// ===== Pronóstico de facturación semanal =====
+let pronOffset = 0;
+let pronDrill = null;
+function pronMoney(n){ return '$' + Math.round(Number(n)||0).toLocaleString('en-US'); }
+function pronAvance(it){
+  if(it.estado==='Listo para entrega') return 95;
+  if(it.estado==='Completado') return 90;
+  const op = it.ordenProduccion;
+  if(op && Array.isArray(op.procesos) && op.procesos.length) return opProgress(op).pct;
+  if(it.estado==='En producción') return 50;
+  if(it.estado==='En proceso') return 35;
+  if(it.estado==='En proceso de diseño') return 20;
+  return 10;
+}
+function pronCalcular(offset){
+  const {monday, sunday} = getWeekRange(offset);
+  const mDs = toDs(monday), sDs = toDs(sunday), hoy = todayStr();
+  const inRange = ds => ds && ds>=mDs && ds<=sDs;
+  const monto = it => Number(it.monto)||0;
+  const sum = l => l.reduce((s,it)=>s+monto(it),0);
+  // Real: mismo criterio que el resumen semanal
+  const realList = items.filter(it=>inRange(it.fechaFacturado) || inRange(it.fechaPagoContado));
+  const porDia = [0,0,0,0,0,0,0];
+  realList.forEach(it=>{
+    const ds = inRange(it.fechaFacturado) ? it.fechaFacturado : it.fechaPagoContado;
+    for(let i=0;i<7;i++){ const dd = new Date(monday); dd.setDate(monday.getDate()+i); if(toDs(dd)===ds){ porDia[i] += monto(it); break; } }
+  });
+  const R = {monday, sunday, mDs, sDs, hoy, offset, realList, real:sum(realList), porDia, listo:[], camino:[], riesgo:[], fuera:[], potencial:[], sinMonto:[]};
+  if(offset !== 0) return R;
+  const vivos = items.filter(it=>!it.papelera);
+  const yaCobrado = it => it.facturado || it.pagoContado;
+  const enProd = ['En proceso','En proceso de diseño','En producción','Completado','Listo para entrega'];
+  vivos.forEach(it=>{
+    const cot = ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO;
+    if(it.estado==='Enviada'){ if(!it.archivado) R.potencial.push(it); return; }
+    if(cot) return;
+    // Listo para facturar ya: entregado y sin facturar (corporativo) o sin cobrar (counter)
+    if(CERRADOS.includes(it.estado)){
+      const pendiente = it.tipoCliente==='counter' ? !it.pagoContado : !it.facturado;
+      if(pendiente){ (monto(it)>0 ? R.listo : R.sinMonto).push(it); }
+      return;
+    }
+    if(it.archivado || yaCobrado(it)) return;
+    const esProd = enProd.includes(it.estado), esAprob = it.estado==='Aprobado';
+    if(!esProd && !esAprob) return;
+    if(monto(it)<=0){ R.sinMonto.push(it); return; }
+    const vencido = it.fechaLimite && hoy > it.fechaLimite;
+    if(it.pausado || vencido){ R.riesgo.push(it); return; }
+    if(esAprob || (it.fechaLimite && it.fechaLimite > sDs)){ R.fuera.push(it); return; }
+    R.camino.push(it);
+  });
+  return R;
+}
+function openPronostico(){
+  pronOffset = 0; pronDrill = null;
+  document.getElementById('overlay-pronostico').classList.add('open');
+  renderPronostico();
+}
+function closePronostico(){ document.getElementById('overlay-pronostico').classList.remove('open'); }
+function navPronostico(d){ pronOffset = Math.min(0, pronOffset + d); pronDrill = null; renderPronostico(); }
+function togglePronDrill(k){ pronDrill = (pronDrill===k) ? null : k; renderPronostico(true); }
+function pronOpen(id){ closePronostico(); openModal(id); }
+function pronRowHtml(it, i, extra){
+  const av = pronAvance(it);
+  return `<div class="pron-row" onclick="pronOpen('${it.id}')">
+    <span class="rk">${i}</span>
+    <span class="nm"><b>${it.cliente}</b><span>${it.descripcion||'—'} · ${estadoTxt(it.estado, it)}${it.pausado?' · Pausado':''}${it.fechaLimite?' · Límite '+fmtDate(it.fechaLimite):''}</span></span>
+    <span class="av" title="Avance ${av}%"><i style="width:${av}%"></i></span>
+    ${extra||''}
+    <span class="mt">${pronMoney(it.monto)}</span>
+  </div>`;
+}
+function renderPronostico(soloDetalle){
+  const R = pronCalcular(pronOffset);
+  const actual = pronOffset===0;
+  const monto = it => Number(it.monto)||0;
+  const sum = l => l.reduce((s,it)=>s+monto(it),0);
+  const vListo = sum(R.listo), vCamino = sum(R.camino), vRiesgo = sum(R.riesgo), vFuera = sum(R.fuera), vPot = sum(R.potencial);
+  const pronostico = R.real + vListo + vCamino;
+  const escala = Math.max(META_MAX*1.12, (pronostico+vRiesgo)*1.03, 1);
+  const f = v => Math.max(0, Math.min(1, v/escala));
+
+  // ----- Medidor semicircular -----
+  const cx=170, cy=170, r=135, sw=20;
+  const pt = (fr,rr)=>{ const a=Math.PI*(1-fr); return [cx+rr*Math.cos(a), cy-rr*Math.sin(a)]; };
+  const arc = (f0,f1)=>{ const [x0,y0]=pt(f0,r), [x1,y1]=pt(f1,r); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+  let acc = 0, segs = '', delay = 0;
+  const addSeg = (v,color,extra)=>{ if(v<=0) return; const f0=acc, f1=acc+f(v); acc=f1;
+    segs += `<path class="seg" pathLength="100" d="${arc(f0,f1)}" stroke="${color}" stroke-width="${sw}" style="animation-delay:${delay}s; ${extra||''}"/>`; delay += .25; };
+  addSeg(R.real,'#FDC901'); addSeg(vListo,'#00A9C1'); addSeg(vCamino,'#8392FF'); addSeg(vRiesgo,'#DA0F48','opacity:.45;');
+  const tickSvg = (v,lbl)=>{ const fr=f(v); const [x0,y0]=pt(fr,r-sw/2-5), [x1,y1]=pt(fr,r+sw/2+5), [tx,ty]=pt(fr,r+sw/2+18);
+    return `<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#fff" stroke-width="2"/><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="#fff" font-size="9" font-weight="800" letter-spacing="1.5" text-anchor="middle" dominant-baseline="middle">${lbl}</text>`; };
+  const [gx,gy] = pt(f(pronostico),r);
+  const gauge = `<svg viewBox="0 0 340 215" aria-hidden="true">
+    <defs><filter id="pglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <path d="${arc(0,1)}" fill="none" stroke="rgba(130,150,255,.14)" stroke-width="${sw}"/>
+    <g filter="url(#pglow)">${segs}</g>
+    ${tickSvg(META_MIN,'MÍN')}${tickSvg(META_MAX,'MÁX')}
+    ${actual && pronostico>0 ? `<circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="5" fill="#fff" filter="url(#pglow)"/>` : ''}
+  </svg>`;
+
+  // ----- Estado / titular -----
+  const total = actual ? pronostico : R.real;
+  let estadoCls, estadoTxtMsg, titular;
+  if(total >= META_MAX){ estadoCls='ok'; estadoTxtMsg='Sobre la meta máxima'; }
+  else if(total >= META_MIN){ estadoCls='ok'; estadoTxtMsg='Meta mínima asegurada'; }
+  else if(total >= META_MIN*0.8){ estadoCls='mid'; estadoTxtMsg='Cerca de la meta mínima'; }
+  else { estadoCls='low'; estadoTxtMsg='Por debajo de la meta mínima'; }
+  const faltaMin = Math.max(0, META_MIN-total), faltaMax = Math.max(0, META_MAX-total);
+  if(actual){
+    titular = `Con lo que hay en producción, esta semana se pueden facturar <b>${pronMoney(pronostico)}</b>. ` +
+      (faltaMin>0 ? `Para la meta mínima faltan <b>${pronMoney(faltaMin)}</b>.` : (faltaMax>0 ? `La mínima está cubierta; para la máxima faltan <b>${pronMoney(faltaMax)}</b>.` : `La meta máxima está cubierta.`));
+  } else {
+    titular = `Semana cerrada: se facturaron <b>${pronMoney(R.real)}</b>, ` + (R.real>=META_MIN ? 'meta mínima alcanzada.' : `<b>${pronMoney(faltaMin)}</b> por debajo de la mínima.`);
+  }
+
+  // ----- Barra apilada -----
+  const pc = v => (f(v)*100).toFixed(2)+'%';
+  let left = 0; let stack = '';
+  [[R.real,'#FDC901'],[vListo,'#00A9C1'],[vCamino,'#8392FF'],[vRiesgo,'rgba(218,15,72,.5)']].forEach(([v,c])=>{ if(v<=0) return; stack += `<div class="s" style="left:${left.toFixed(2)}%; width:${(f(v)*100).toFixed(2)}%; background:${c};"></div>`; left += f(v)*100; });
+  stack += `<div class="tick" style="left:${pc(META_MIN)}"><span>MÍN</span></div><div class="tick" style="left:${pc(META_MAX)}"><span>MÁX</span></div>`;
+  const leg = (c,n,v,cnt)=>`<div class="pron-leg"><i style="background:${c}"></i>${n}<span class="c">${cnt!==undefined? cnt : ''}</span><span class="n">${pronMoney(v)}</span></div>`;
+  const legend = `<div class="pron-legend">
+    ${leg('#FDC901','Facturado',R.real, R.realList.length+' proy.')}
+    ${actual ? leg('#00A9C1','Listo para facturar',vListo,R.listo.length+' proy.') + leg('#8392FF','En camino',vCamino,R.camino.length+' proy.') + leg('rgba(218,15,72,.7)','En riesgo (no suma)',vRiesgo,R.riesgo.length+' proy.') : ''}
+  </div>`;
+
+  // ----- Facturación por día -----
+  const maxDia = Math.max(...R.porDia, META_MIN/5, 1);
+  const dn = ['L','M','M','J','V','S','D'];
+  const dias = R.porDia.map((v,i)=>{
+    const d = new Date(R.monday); d.setDate(R.monday.getDate()+i);
+    const ds = toDs(d);
+    return `<div class="pron-day ${v>0?'real':''} ${ds===R.hoy?'hoy':''}" title="${fmtDate(ds)}: ${pronMoney(v)}"><div class="bar" style="height:${Math.max(4,(v/maxDia)*100)}%"></div>${dn[i]}</div>`;
+  }).join('');
+
+  // ----- Fichas -----
+  const tile = (k,color,lbl,v,sub)=>`<div class="pron-card pron-tile ${pronDrill===k?'activo':''}" onclick="togglePronDrill('${k}')"><span class="bar" style="background:${color}"></span><div class="pron-lbl">${lbl}</div><div class="v">${pronMoney(v)}</div><div class="k">${sub}</div></div>`;
+  const tiles = actual ? `<div class="pron-tiles">
+    ${tile('listo','#00A9C1','Listo para facturar',vListo,R.listo.length+' entregados sin facturar/cobrar')}
+    ${tile('camino','#8392FF','En camino',vCamino,R.camino.length+' en producción')}
+    ${tile('riesgo','#DA0F48','En riesgo',vRiesgo,R.riesgo.length+' vencidos o pausados')}
+    ${tile('fuera','#5A66C9','Fuera de esta semana',vFuera,R.fuera.length+' aprobados o con límite posterior')}
+    ${tile('potencial','#FDC901','Potencial: cotizaciones',vPot,R.potencial.length+' enviadas sin respuesta')}
+  </div>` : '';
+  const nombres = {listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Fuera de esta semana', potencial:'Cotizaciones enviadas (no suman)'};
+  let drill = '';
+  if(actual && pronDrill){
+    const l = R[pronDrill]||[];
+    const orden = [...l].sort((a,b)=>monto(b)-monto(a));
+    drill = `<div class="pron-card pron-sec"><h3 style="margin-top:0">${nombres[pronDrill]} · ${l.length}</h3>${orden.length ? orden.map((it,i)=>pronRowHtml(it,i+1)).join('') : '<div class="pron-empty">Nada en esta categoría.</div>'}</div>`;
+  }
+
+  // ----- Ruta a la meta -----
+  let ruta = '';
+  if(actual){
+    const cand = [...[...R.listo].sort((a,b)=>monto(b)-monto(a)), ...[...R.camino].sort((a,b)=>pronAvance(b)-pronAvance(a) || monto(b)-monto(a))];
+    let cum = R.real, mostroMin = R.real>=META_MIN, mostroMax = R.real>=META_MAX;
+    let filas = '';
+    if(R.real >= META_MAX) filas = '<div class="pron-empty">La meta máxima ya está alcanzada con lo facturado. Todo lo demás es ganancia extra.</div>';
+    else {
+      let n = 0;
+      for(const it of cand){
+        if(mostroMax || n>=10) break;
+        cum += monto(it); n++;
+        let chips = '';
+        if(!mostroMin && cum>=META_MIN){ chips += '<span class="pron-chip min">Meta mínima</span> '; mostroMin = true; }
+        if(!mostroMax && cum>=META_MAX){ chips += '<span class="pron-chip max">Meta máxima</span>'; mostroMax = true; }
+        filas += pronRowHtml(it, n, `<span class="cum">${chips || ('Acum. '+pronMoney(cum))}</span>`);
+      }
+      if(!filas) filas = '<div class="pron-empty">No hay proyectos listos ni en camino para esta semana.</div>';
+      else if(!mostroMin) filas += `<div class="pron-warn">Aun cerrando todo lo anterior llegas a ${pronMoney(cum)}: faltan <b>${pronMoney(META_MIN-cum)}</b> para la mínima. Hace falta aprobar o adelantar más trabajo.</div>`;
+    }
+    ruta = `<div class="pron-card pron-sec"><h3 style="margin-top:0">Ruta a la meta · cierra en este orden</h3>${filas}</div>`;
+  }
+
+  // ----- Avisos -----
+  const aviso = (actual && R.sinMonto.length) ? `<div class="pron-warn">${R.sinMonto.length} proyecto${R.sinMonto.length>1?'s':''} sin monto no se suma${R.sinMonto.length>1?'n':''} al pronóstico: ` + R.sinMonto.slice(0,6).map(it=>`<a onclick="pronOpen('${it.id}')">${it.cliente}${it.descripcion?' — '+it.descripcion:''}</a>`).join(' · ') + (R.sinMonto.length>6?' …':'') + '</div>' : '';
+
+  document.getElementById('pron-body').className = soloDetalle ? 'pron-noanim' : '';
+  document.getElementById('pron-body').innerHTML = `
+    <div class="pron-head">
+      <h2 class="pron-title"><span class="pron-live"></span>Pronóstico de facturación</h2>
+      <div class="pron-nav"><button onclick="navPronostico(-1)">&#9664;</button><span>${weekLabelFor(R.monday, R.sunday)}${actual?' · esta semana':''}</span><button onclick="navPronostico(1)" ${actual?'disabled':''}>&#9654;</button></div>
+    </div>
+    <div class="pron-top">
+      <div class="pron-card pron-gauge">
+        <div class="pron-lbl" style="text-align:left;">${actual?'Proyección de la semana':'Facturado en la semana'}</div>
+        ${gauge}
+        <div class="center"><div class="pron-big">${pronMoney(total)}</div><div class="pron-sub">Meta ${pronMoney(META_MIN)} – ${pronMoney(META_MAX)}</div><span class="pron-status ${estadoCls}">${estadoTxtMsg}</span></div>
+      </div>
+      <div class="pron-card">
+        <div class="pron-headline">${titular}</div>
+        <div class="pron-stack">${stack}</div>
+        ${legend}
+        <div class="pron-lbl" style="margin-top:16px;">Facturado por día</div>
+        <div class="pron-days">${dias}</div>
+      </div>
+    </div>
+    ${tiles}
+    ${drill}
+    ${ruta}
+    ${aviso}
+    <div class="pron-foot">Pronóstico de <b>facturación</b>, no de cobro: lo facturado a crédito se cobra días después (eso se sigue en el sistema financiero). “En camino” incluye todo lo que está en producción, salvo lo que tiene fecha límite posterior a esta semana. Las cotizaciones enviadas se muestran como potencial y no suman.</div>
+    <div class="modal-actions" style="margin-top:14px; display:flex; justify-content:flex-end;"><button class="pron-close" onclick="closePronostico()">Cerrar</button></div>`;
 }
 
 function openResumen(){

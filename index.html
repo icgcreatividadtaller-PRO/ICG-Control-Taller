@@ -319,7 +319,7 @@
 
   /* ===== Pronóstico de facturación ===== */
   #overlay-pronostico{background:rgba(3,5,20,.78);}
-  .pron-modal{max-width:1180px; position:relative; overflow:hidden; padding:26px 30px 24px; color:#E7EAFF; border:1px solid rgba(130,150,255,.28); border-top:1px solid rgba(130,150,255,.28);
+  .pron-modal{max-width:min(1320px,96vw); position:relative; overflow:hidden; padding:26px 30px 24px; color:#E7EAFF; border:1px solid rgba(130,150,255,.28); border-top:1px solid rgba(130,150,255,.28);
     background:radial-gradient(ellipse 80% 50% at 30% 0%, #1c2278 0%, rgba(11,16,51,0) 70%), linear-gradient(165deg,#0B1033 0%,#0A0F3C 55%,#060924 100%);
     box-shadow:0 30px 90px rgba(0,0,12,.65), 0 0 70px rgba(70,90,255,.16); isolation:isolate; text-transform:none;}
   .pron-modal::before{content:''; position:absolute; inset:0; z-index:-2; pointer-events:none;
@@ -364,13 +364,19 @@
   .pron-day .bar{width:100%; border-radius:4px 4px 2px 2px; background:rgba(130,150,255,.15); min-height:3px; transition:height .9s cubic-bezier(.3,.7,.2,1);}
   .pron-day.real .bar{background:linear-gradient(180deg,#FDC901,#C79A00); box-shadow:0 0 14px rgba(253,201,1,.35);}
   .pron-day.hoy{color:#fff;} .pron-day.hoy .bar{outline:1px solid rgba(255,255,255,.5); outline-offset:2px;}
-  .pron-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:14px;}
+  .pron-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:12px; margin-top:14px;}
   .pron-tile{cursor:pointer; position:relative; transition:transform .15s, border-color .15s, background .15s;}
   .pron-tile:hover{transform:translateY(-2px); border-color:rgba(130,150,255,.5);}
   .pron-tile.activo{border-color:#A9B6FF; background:rgba(131,146,255,.12);}
   .pron-tile .v{font-size:30px; font-weight:800; color:#fff; margin:8px 0 3px; letter-spacing:.01em;}
   .pron-tile .k{font-size:16.5px; color:#C3CBF2; font-weight:600;}
   .pron-tile .bar{position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:0 3px 3px 0;}
+  .pron-pot-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px;}
+  .pron-pot-item{cursor:pointer; padding:9px 12px; border-radius:10px; border:1px solid rgba(253,201,1,.25); background:rgba(253,201,1,.05); display:flex; flex-direction:column; gap:2px; min-width:0; transition:background .12s, border-color .12s;}
+  .pron-pot-item:hover{background:rgba(253,201,1,.12); border-color:rgba(253,201,1,.55);}
+  .pron-pot-item b{font-size:16.5px; color:#fff; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pron-pot-item span{font-size:15.5px; color:#C3CBF2; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:1.2em;}
+  .pron-pot-item em{font-style:normal; font-size:17.5px; font-weight:800; color:#FDC901;}
   .pron-sec{margin-top:18px;}
   .pron-sec h3{margin:0 0 10px; font-size:16.5px; font-weight:800; letter-spacing:.16em; color:#A9B6FF; text-transform:uppercase;}
   .pron-row{display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; cursor:pointer; border:1px solid transparent; transition:background .12s, border-color .12s;}
@@ -2565,6 +2571,29 @@ document.addEventListener('keydown', e=>{
   }
 });
 
+/* ESC cierra la ventana abierta que esté más arriba */
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  const abierto = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
+  if(abierto('overlay-custom-alert') || abierto('overlay-custom-confirm')) return; // ya los maneja su propio atajo
+  const orden = [
+    ['overlay-op-gestionar-lista', cerrarGestionLista],
+    ['overlay-rezagados', closeRezagadosDialog],
+    ['overlay-op-reminder', closeOpReminder],
+    ['overlay-respaldo-reminder', closeRespaldoReminder],
+    ['overlay-historial', closeHistorial],
+    ['overlay-op', closeOrdenProduccion],
+    ['overlay', closeModal],
+    ['overlay-pronostico', closePronostico],
+    ['overlay-resumen-mensual', closeResumenMensual],
+    ['overlay-resumen', closeResumen],
+    ['overlay-resumen-diario', closeResumenDiario]
+  ];
+  for(const [id, fn] of orden){
+    if(abierto(id)){ e.preventDefault(); fn(); return; }
+  }
+});
+
 function printFicha(){
   if(!editingId) return;
   const it = items.find(i=>i.id===editingId);
@@ -3478,6 +3507,7 @@ let pronOffset = 0;
 let pronDrill = null;
 function pronMoney(n){ return '$' + Math.round(Number(n)||0).toLocaleString('en-US'); }
 function pronAvance(it){
+  if(CERRADOS.includes(it.estado)) return 100;
   if(it.estado==='Listo para entrega') return 95;
   if(it.estado==='Completado') return 90;
   const op = it.ordenProduccion;
@@ -3539,11 +3569,9 @@ function navPronostico(d){ pronOffset = Math.min(0, pronOffset + d); pronDrill =
 function togglePronDrill(k){ pronDrill = (pronDrill===k) ? null : k; renderPronostico(true); }
 function pronOpen(id){ closePronostico(); openModal(id); }
 function pronRowHtml(it, i, extra){
-  const av = pronAvance(it);
   return `<div class="pron-row" onclick="pronOpen('${it.id}')">
     <span class="rk">${i}</span>
     <span class="nm"><b>${it.cliente}</b><span>${it.descripcion||'—'} · ${estadoTxt(it.estado, it)}${it.pausado?' · Pausado':''}${it.fechaLimite?' · Límite '+fmtDate(it.fechaLimite):''}</span></span>
-    <span class="av" title="Avance ${av}%"><i style="width:${av}%"></i></span>
     ${extra||''}
     <span class="mt">${pronMoney(it.monto)}</span>
   </div>`;
@@ -3614,19 +3642,29 @@ function renderPronostico(soloDetalle){
 
   // ----- Fichas -----
   const tile = (k,color,lbl,v,sub)=>`<div class="pron-card pron-tile ${pronDrill===k?'activo':''}" onclick="togglePronDrill('${k}')"><span class="bar" style="background:${color}"></span><div class="pron-lbl">${lbl}</div><div class="v">${pronMoney(v)}</div><div class="k">${sub}</div></div>`;
-  const tiles = actual ? `<div class="pron-tiles">
-    ${tile('listo','#00A9C1','Listo para facturar',vListo,R.listo.length+' entregados sin facturar/cobrar')}
-    ${tile('camino','#8392FF','En camino',vCamino,R.camino.length+' en producción')}
-    ${tile('riesgo','#DA0F48','En riesgo',vRiesgo,R.riesgo.length+' vencidos o pausados')}
-    ${tile('fuera','#5A66C9','Fuera de esta semana',vFuera,R.fuera.length+' aprobados o con límite posterior')}
-    ${tile('potencial','#FDC901','Potencial: cotizaciones',vPot,R.potencial.length+' enviadas sin respuesta')}
-  </div>` : '';
-  const nombres = {listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Fuera de esta semana', potencial:'Cotizaciones enviadas (no suman)'};
+  const tiles = `<div class="pron-tiles">
+    ${tile('real','#FDC901','Pagado',R.real,R.realList.length+(actual?' facturados esta semana':' facturados en la semana'))}
+    ${actual ? tile('listo','#00A9C1','Listo para facturar',vListo,R.listo.length+' entregados sin facturar/cobrar')
+    + tile('camino','#8392FF','En camino',vCamino,R.camino.length+' en producción')
+    + tile('riesgo','#DA0F48','En riesgo',vRiesgo,R.riesgo.length+' vencidos o pausados')
+    + tile('fuera','#5A66C9','Fuera de esta semana',vFuera,R.fuera.length+' aprobados o con límite posterior') : ''}
+  </div>`;
+  const nombres = {real:'Pagado: facturado en la semana', listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Fuera de esta semana'};
   let drill = '';
-  if(actual && pronDrill){
-    const l = R[pronDrill]||[];
+  if(pronDrill && nombres[pronDrill]){
+    const l = (pronDrill==='real' ? R.realList : R[pronDrill])||[];
     const orden = [...l].sort((a,b)=>monto(b)-monto(a));
     drill = `<div class="pron-card pron-sec"><h3 style="margin-top:0">${nombres[pronDrill]} · ${l.length}</h3>${orden.length ? orden.map((it,i)=>pronRowHtml(it,i+1)).join('') : '<div class="pron-empty">Nada en esta categoría.</div>'}</div>`;
+  }
+
+  // ----- Potencial (tabla secundaria horizontal, no suma) -----
+  let potencial = '';
+  if(actual){
+    const lp = [...R.potencial].sort((a,b)=>monto(b)-monto(a));
+    potencial = `<div class="pron-card pron-sec pron-pot">
+      <h3 style="margin-top:0">Potencial: cotizaciones enviadas sin respuesta · ${lp.length} · ${pronMoney(vPot)} <span style="font-weight:600; letter-spacing:.08em; color:#B4BDEB;">(no suman al pronóstico)</span></h3>
+      ${lp.length ? `<div class="pron-pot-grid">${lp.map(it=>`<div class="pron-pot-item" onclick="pronOpen('${it.id}')"><b>${it.cliente}</b><span>${it.descripcion||''}</span><em>${monto(it)?pronMoney(monto(it)):'Sin monto'}</em></div>`).join('')}</div>` : '<div class="pron-empty">No hay cotizaciones enviadas pendientes.</div>'}
+    </div>`;
   }
 
   // ----- Ruta a la meta -----
@@ -3679,6 +3717,7 @@ function renderPronostico(soloDetalle){
     ${tiles}
     ${drill}
     ${ruta}
+    ${potencial}
     ${aviso}
     ${avisoHuerf}
     <div class="pron-foot">Pronóstico de <b>facturación</b>, no de cobro: lo facturado a crédito se cobra días después (eso se sigue en el sistema financiero). “En camino” incluye todo lo que está en producción, salvo lo que tiene fecha límite posterior a esta semana. Las cotizaciones enviadas se muestran como potencial y no suman.</div>

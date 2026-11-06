@@ -632,7 +632,7 @@
     <div class="field"><label>Cliente</label><input id="f-cliente" list="clientes-list" placeholder="Nombre del cliente o empresa"><datalist id="clientes-list"></datalist></div>
     <div class="field"><label>Nombre del proyecto</label><textarea id="f-descripcion" placeholder="Titulo corto, ej: Rotulacion de cristales"></textarea></div>
     <div class="field"><label>Descripcion</label><textarea id="f-notas" placeholder="Detalles, medidas, especificaciones"></textarea></div>
-    <div class="field"><label>Monto del proyecto ($)</label><input type="text" inputmode="decimal" id="f-monto" placeholder="0.00" oninput="maskMontoInput(this)" style="text-transform:none;"></div>
+    <div class="field"><label>Monto del proyecto ($)</label><input type="text" inputmode="decimal" id="f-monto" placeholder="0.00" oninput="maskMontoInput(this); renderAbonosModal();" style="text-transform:none;"></div>
     <div class="grid2">
       <div id="field-fecha-recepcion-home" style="display:none;"></div>
       <div class="field" id="field-fecha-recepcion"><label id="lbl-fecha-recepcion">Fecha de recepcion</label><input type="date" id="f-fecha" style="text-transform:none;"></div>
@@ -668,6 +668,15 @@
       <input type="checkbox" id="f-pendiente-pago" onclick="if(this.checked){ document.getElementById('f-pago-contado').checked=false; toggleFechaPagoVisible(); } syncEstadoSelectConPago();">
       <label style="margin:0;">Entregado / Pendiente de Pago</label>
       <span id="f-pendiente-pago-fecha" style="font-size:10.5px; color:var(--ink-3); text-transform:none;"></span>
+    </div>
+    <div class="field" id="field-abonos-line" style="display:none;">
+      <label>Abonos / pagos parciales</label>
+      <div id="f-abonos-list"></div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:6px;">
+        <input type="text" inputmode="decimal" id="f-abono-monto" placeholder="Monto del abono ($)" oninput="maskMontoInput(this)" onkeydown="if(event.key==='Enter'){ event.preventDefault(); agregarAbono(); }" style="text-transform:none; flex:1; min-width:140px;">
+        <input type="date" id="f-abono-fecha" style="text-transform:none; flex:1; min-width:140px;">
+        <button type="button" class="btn-ghost" onclick="agregarAbono()">+ Agregar abono</button>
+      </div>
     </div>
     <div class="field" id="field-estado" style="display:none;">
       <label>Estado</label>
@@ -1697,9 +1706,28 @@ function actualizarCamposPorTipoCliente(){
   const mostrarCounter = (!esCotizacion && tipo==='counter');
   document.getElementById('field-pago-contado-line').style.display = mostrarCounter ? '' : 'none';
   document.getElementById('field-pendiente-pago-line').style.display = mostrarCounter ? '' : 'none';
+  document.getElementById('field-abonos-line').style.display = (!esCotizacion && !esCreacion) ? '' : 'none';
   toggleFechaPagoVisible();
   toggleFechaFacturadoVisible();
 }
+let abonosTmp = [];
+function abonosTotal(it){ return ((it&&it.abonos)||[]).reduce((s,a)=>s+(Number(a.monto)||0),0); }
+function renderAbonosModal(){
+  const box = document.getElementById('f-abonos-list'); if(!box) return;
+  const total = abonosTmp.reduce((s,a)=>s+(Number(a.monto)||0),0);
+  const monto = parseMontoInput(document.getElementById('f-monto').value)||0;
+  const filas = abonosTmp.map((a,i)=>`<div style="display:flex; align-items:center; gap:10px; padding:5px 0; font-size:12.5px; text-transform:none;"><span style="flex:1;">${fmtDate(a.fecha)}</span><b>${formatMoney(a.monto)}</b><button type="button" class="btn-ghost" style="padding:2px 8px;" title="Quitar" onclick="quitarAbono(${i})">&times;</button></div>`).join('');
+  box.innerHTML = filas + (abonosTmp.length ? `<div style="font-size:12px; font-weight:700; margin-top:4px; text-transform:none;">Abonado: ${formatMoney(total)}${monto?` &middot; Saldo pendiente: ${formatMoney(Math.max(0,monto-total))}`:''}</div>` : '<div style="font-size:11.5px; color:var(--ink-3); text-transform:none;">Sin abonos registrados.</div>');
+}
+function agregarAbono(){
+  const m = parseMontoInput(document.getElementById('f-abono-monto').value);
+  if(!m || m<=0){ return false; }
+  abonosTmp.push({monto:m, fecha: document.getElementById('f-abono-fecha').value || todayStr()});
+  abonosTmp.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  document.getElementById('f-abono-monto').value=''; document.getElementById('f-abono-fecha').value='';
+  renderAbonosModal(); return true;
+}
+function quitarAbono(i){ abonosTmp.splice(i,1); renderAbonosModal(); }
 function resolvedTipoCliente(){
   if(document.getElementById('f-tipo-counter').checked) return 'counter';
   if(document.getElementById('f-tipo-corporativa').checked) return 'corporativa';
@@ -2713,6 +2741,9 @@ function openModal(prefillId){
     document.getElementById('f-pendiente-pago').checked = !!it.pendientePago;
     document.getElementById('f-pendiente-pago-fecha').textContent = it.fechaPendientePago ? ('Desde '+fmtDate(it.fechaPendientePago)) : '';
     actualizarCamposPorTipoCliente();
+    abonosTmp = JSON.parse(JSON.stringify(it.abonos||[]));
+    document.getElementById('f-abono-monto').value=''; document.getElementById('f-abono-fecha').value='';
+    renderAbonosModal();
     document.getElementById('f-numero-oc').value = it.numeroOC||'';
     document.getElementById('f-numero-oc').disabled = !it.tieneOC;
     document.getElementById('f-notas').value = it.notas||'';
@@ -2757,6 +2788,7 @@ function openModal(prefillId){
     document.getElementById('f-fecha-pago').value = '';
     document.getElementById('f-pendiente-pago').checked = false;
     document.getElementById('f-pendiente-pago-fecha').textContent = '';
+    abonosTmp = []; renderAbonosModal();
     actualizarCamposPorTipoCliente();
     document.getElementById('f-numero-oc').disabled = true;
     catSel.value = 'Offset';
@@ -2782,8 +2814,10 @@ function saveModal(){
   if(!editingId && !tipoClienteVal){ showAlert('Selecciona el Tipo de Cliente: Counter o Corporativo.'); return; }
   const esModalCotizacionGuardado = esModalCotizacion();
   const origen = esModalCotizacionGuardado && !editingId ? 'cotizacion' : document.getElementById('f-origen').value;
+  if(editingId) agregarAbono();   // si dejó un abono escrito sin pulsar Agregar, se incluye
   const montoVal = document.getElementById('f-monto').value;
   const base = {
+    abonos: abonosTmp.map(a=>({monto:a.monto, fecha:a.fecha})),
     origen,
     cliente,
     tipoCliente: tipoClienteVal,
@@ -3523,22 +3557,37 @@ function pronCalcular(offset){
   const inRange = ds => ds && ds>=mDs && ds<=sDs;
   const monto = it => Number(it.monto)||0;
   const sum = l => l.reduce((s,it)=>s+monto(it),0);
-  // Real: mismo criterio que el resumen semanal
-  const realList = items.filter(it=>inRange(it.fechaFacturado) || inRange(it.fechaPagoContado));
+  // Facturado/cobrado en la semana: cierres (facturado o pagado) + abonos recibidos en la semana.
+  // Si el proyecto tuvo abonos, al cerrarse solo cuenta el saldo (los abonos ya se contaron en su fecha).
   const porDia = [0,0,0,0,0,0,0];
-  realList.forEach(it=>{
-    const ds = inRange(it.fechaFacturado) ? it.fechaFacturado : it.fechaPagoContado;
-    for(let i=0;i<7;i++){ const dd = new Date(monday); dd.setDate(monday.getDate()+i); if(toDs(dd)===ds){ porDia[i] += monto(it); break; } }
+  const sumaDia = (ds,v)=>{ for(let i=0;i<7;i++){ const dd = new Date(monday); dd.setDate(monday.getDate()+i); if(toDs(dd)===ds){ porDia[i] += v; break; } } };
+  const realList = [];
+  items.forEach(it=>{
+    if(it.papelera) return;
+    const abonos = it.abonos||[];
+    const abTot = abonos.reduce((s,a)=>s+(Number(a.monto)||0),0);
+    const cierreDs = inRange(it.fechaFacturado) ? it.fechaFacturado : (inRange(it.fechaPagoContado) ? it.fechaPagoContado : null);
+    const abSem = abonos.filter(a=>inRange(a.fecha));
+    if(!cierreDs && !abSem.length) return;
+    let aporte = 0;
+    if(cierreDs){ const v = Math.max(0, monto(it)-abTot); aporte += v; sumaDia(cierreDs, v); }
+    abSem.forEach(a=>{ const v = Number(a.monto)||0; aporte += v; sumaDia(a.fecha, v); });
+    const tag = !cierreDs ? 'Abono' : (abTot>0 ? 'Saldo final' : '');
+    realList.push(Object.assign({}, it, {monto: aporte, _tag: tag}));
   });
   const R = {monday, sunday, mDs, sDs, hoy, offset, realList, real:sum(realList), porDia, listo:[], camino:[], riesgo:[], fuera:[], potencial:[], sinMonto:[], huerfanos:[]};
   if(offset !== 0) return R;
-  const vivos = items.filter(it=>!it.papelera);
+  const vivos = items.filter(it=>!it.papelera).map(it=>{
+    const ab = (it.abonos||[]).reduce((s,a)=>s+(Number(a.monto)||0),0);
+    return ab>0 ? Object.assign({}, it, {monto: Math.max(0,(Number(it.monto)||0)-ab), _saldo:true, _abonado:ab}) : it;
+  });
   const yaCobrado = it => it.facturado || it.pagoContado;
   const enProd = ['En proceso','En proceso de diseño','En producción','Completado','Listo para entrega'];
   vivos.forEach(it=>{
     const cot = ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO;
     if(it.estado==='Enviada'){ if(!it.archivado) R.potencial.push(it); return; }
     if(cot) return;
+    if(it._saldo && monto(it)<=0) return;   // ya abonado por completo
     // Listo para facturar ya: entregado y sin facturar (corporativo) o sin cobrar (counter)
     if(CERRADOS.includes(it.estado)){
       const pendiente = it.tipoCliente==='counter' ? !it.pagoContado : !it.facturado;
@@ -3571,7 +3620,7 @@ function pronOpen(id){ closePronostico(); openModal(id); }
 function pronRowHtml(it, i, extra){
   return `<div class="pron-row" onclick="pronOpen('${it.id}')">
     <span class="rk">${i}</span>
-    <span class="nm"><b>${it.cliente}</b><span>${it.descripcion||'—'} · ${estadoTxt(it.estado, it)}${it.pausado?' · Pausado':''}${it.fechaLimite?' · Límite '+fmtDate(it.fechaLimite):''}</span></span>
+    <span class="nm"><b>${it.cliente}</b><span>${it.descripcion||'—'} · ${estadoTxt(it.estado, it)}${it.pausado?' · Pausado':''}${it.fechaLimite?' · Límite '+fmtDate(it.fechaLimite):''}${it._tag?' · '+it._tag:''}${it._saldo?' · Saldo (abonó '+pronMoney(it._abonado)+')':''}</span></span>
     ${extra||''}
     <span class="mt">${pronMoney(it.monto)}</span>
   </div>`;
@@ -3643,13 +3692,13 @@ function renderPronostico(soloDetalle){
   // ----- Fichas -----
   const tile = (k,color,lbl,v,sub)=>`<div class="pron-card pron-tile ${pronDrill===k?'activo':''}" onclick="togglePronDrill('${k}')"><span class="bar" style="background:${color}"></span><div class="pron-lbl">${lbl}</div><div class="v">${pronMoney(v)}</div><div class="k">${sub}</div></div>`;
   const tiles = `<div class="pron-tiles">
-    ${tile('real','#FDC901','Pagado',R.real,R.realList.length+(actual?' facturados esta semana':' facturados en la semana'))}
+    ${tile('real','#FDC901','Facturado',R.real,R.realList.length+(actual?' facturados esta semana':' facturados en la semana'))}
     ${actual ? tile('listo','#00A9C1','Listo para facturar',vListo,R.listo.length+' entregados sin facturar/cobrar')
     + tile('camino','#8392FF','En camino',vCamino,R.camino.length+' en producción')
     + tile('riesgo','#DA0F48','En riesgo',vRiesgo,R.riesgo.length+' vencidos o pausados')
     + tile('fuera','#5A66C9','Fuera de esta semana',vFuera,R.fuera.length+' aprobados o con límite posterior') : ''}
   </div>`;
-  const nombres = {real:'Pagado: facturado en la semana', listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Fuera de esta semana'};
+  const nombres = {real:'Facturado en la semana', listo:'Listo para facturar', camino:'En camino', riesgo:'En riesgo', fuera:'Fuera de esta semana'};
   let drill = '';
   if(pronDrill && nombres[pronDrill]){
     const l = (pronDrill==='real' ? R.realList : R[pronDrill])||[];

@@ -723,7 +723,10 @@
     </div>
     <div class="field" id="field-archivar-btn" style="display:none;"></div>
     <div class="modal-actions">
-      <button class="btn-ghost" id="btn-delete" style="display:none; color:var(--magenta);" onclick="deleteFromModal()">Eliminar</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-ghost" id="btn-delete" style="display:none; color:var(--magenta);" onclick="deleteFromModal()">Eliminar</button>
+        <button class="btn-ghost" id="btn-duplicar" style="display:none;" onclick="duplicarDesdeModal()" title="Crea un proyecto nuevo con los mismos datos y la fecha de hoy">&#10697; Duplicar</button>
+      </div>
       <div class="modal-actions-right">
         <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
         <button class="btn-primary" style="margin-left:0;" onclick="saveModal()">Guardar</button>
@@ -784,11 +787,12 @@
       <label>Área de esta orden</label>
       <div id="op-tipo-sugerido-hint" style="font-size:11.5px; color:var(--ink-2); margin-bottom:8px;"></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-        <button type="button" class="btn-tipo-op" style="background:#000080; color:#fff; border-color:#000080;" onclick="elegirTipoOP('offset')">Offset</button>
-        <button type="button" class="btn-tipo-op" style="background:#E67E22; color:#fff; border-color:#E67E22;" onclick="elegirTipoOP('rotulos')">Rótulos &amp; Señalética</button>
-        <button type="button" class="btn-tipo-op" style="background:#2E86DE; color:#fff; border-color:#2E86DE;" onclick="elegirTipoOP('impresion')">Impresión &amp; Gran Formato</button>
-        <button type="button" class="btn-tipo-op" style="background:#16A085; color:#fff; border-color:#16A085;" onclick="elegirTipoOP('laser')">Láser</button>
-        <button type="button" class="btn-tipo-op" style="background:#7F8C8D; color:#fff; border-color:#7F8C8D; grid-column:1 / -1;" onclick="elegirTipoOP('otros')">Otros</button>
+        <button type="button" class="btn-tipo-op" style="background:#000080; color:#fff; border-color:#000080;" onclick="elegirTipoOP('letreros')">Letreros</button>
+        <button type="button" class="btn-tipo-op" style="background:#2E86DE; color:#fff; border-color:#2E86DE;" onclick="elegirTipoOP('impresion')">Impresión</button>
+        <button type="button" class="btn-tipo-op" style="background:#E67E22; color:#fff; border-color:#E67E22;" onclick="elegirTipoOP('rotulacion')">Rotulación</button>
+        <button type="button" class="btn-tipo-op" style="background:#16A085; color:#fff; border-color:#16A085;" onclick="elegirTipoOP('senalizacion')">Señalización</button>
+        <button type="button" class="btn-tipo-op" style="background:#7F8C8D; color:#fff; border-color:#7F8C8D;" onclick="elegirTipoOP('servicios')">Servicios</button>
+        <button type="button" class="btn-tipo-op" style="background:#8E44AD; color:#fff; border-color:#8E44AD;" onclick="elegirTipoOP('personalizacion')">Personalización</button>
       </div>
     </div>
 
@@ -956,7 +960,11 @@ const ESTADO_RECHAZADO = 'No aprobado';
 const ALL_ESTADOS = ['Pendiente', ...ESTADOS_COTIZACION, ...PHASES.flatMap(p=>p.estados).filter(e=>e!=='Pendiente'), ESTADO_RECHAZADO];
 const ESTADO_PENDIENTE_PAGO = 'Pendiente de pago';
 const CERRADOS = ['Entregado', ESTADO_PENDIENTE_PAGO];
-const CATEGORIAS_BASE = ['Offset','Digital','Acrílico','Rótulo','Rotulación','Pintura','Pandereta','Stickers','Láser','Fotografía','Vinil Cortado'];
+// Las 5 categorías oficiales (identidad de marca): lo que se lleva el cliente. Una sola por proyecto.
+const CATEGORIAS_BASE = ['Letreros','Impresión','Rotulación','Señalización','Servicios','Personalización'];
+const CATEGORIA_A_TIPO_OP = {'Letreros':'letreros','Impresión':'impresion','Rotulación':'rotulacion','Señalización':'senalizacion','Servicios':'servicios','Personalización':'personalizacion'};
+// Categorías antiguas con destino claro; las demás quedan "por asignar" para que las elijas tú
+const CATEGORIAS_MIGRACION = {'Offset':'Impresión','Digital':'Impresión','Stickers':'Impresión','Rotulación':'Rotulación','Láser':'Servicios','Vinil Cortado':'Servicios'};
 let categoriasExtra = [];
 
 const PROCESOS_BASE = [
@@ -992,26 +1000,47 @@ const MATERIALES_SUGERIDOS = {
   'Offset': ['Bond 20','Bond 24','NCR','Cartonite','Opalina']
 };
 const OP_TIPOS = [
+  {key:'letreros', label:'Letreros'},
+  {key:'impresion', label:'Impresión'},
+  {key:'rotulacion', label:'Rotulación'},
+  {key:'senalizacion', label:'Señalización'},
+  {key:'servicios', label:'Servicios'},
+  {key:'personalizacion', label:'Personalización'},
+  // Áreas antiguas: se conservan para que las órdenes ya hechas sigan viéndose igual
   {key:'offset', label:'Offset'},
   {key:'rotulos', label:'Rótulos & Señalética'},
-  {key:'impresion', label:'Impresión & Gran Formato'},
   {key:'laser', label:'Láser'},
   {key:'otros', label:'Otros'}
 ];
 const OP_PROCESOS_DEFAULT = {
+  letreros: ['Compra de materiales','Diseño','Corte','Fabricación / estructura','Impresión','Armado / ensamblaje','Iluminación LED','Pintura / acabado','Instalación','Entrega'],
+  rotulacion: ['Compra de materiales','Diseño','Impresión del vinil','Laminado','Preparación de superficie','Rotulación','Instalación','Entrega'],
+  senalizacion: ['Compra de materiales','Diseño','Corte','Impresión','Armado / ensamblaje','Instalación','Entrega'],
+  personalizacion: ['Diseño / arte','Aprobación del arte','Compra de materiales','Pedido a proveedor','Producción en taller','Recepción del proveedor','Control de calidad','Entrega'],
+  servicios: ['Recepción del archivo','Corte láser','Corte de vinil','Grabado','Terminación','Entrega'],
   offset: ['Compra de materiales','Diseño','CTP','Impresión','Terminación','Numeración','Empaque','Entrega'],
   rotulos: ['Compra de materiales','Diseño','Impresión del vinil','Laminado','Rotulación','Instalación','Corte de vinil','Aplicación/Transferencia','Entrega'],
-  impresion: ['Compra de materiales','Diseño','Impresión','Impresión lona','Corte','Terminación','Ojaletes','Tensando','Empaque','Entrega'],
+  impresion: ['Compra de materiales','Diseño','CTP','Impresión','Impresión lona','Corte','Terminación','Numeración','Ojaletes','Tensando','Empaque','Entrega'],
   laser: ['Compra de materiales','Diseño','Corte láser','Grabado','Pulido','Doblado/Formado','Ensamblaje','Empaque','Entrega'],
   otros: ['Compra de materiales','Diseño','Producción','Entrega']
 };
 const OP_MATERIALES_DEFAULT = {
+  letreros: ['Acrílico','Sintra','Aluminio compuesto (ACM)','Vinil','Estructura metálica','LED y transformador','Banner'],
+  rotulacion: ['Vinil','Vinil fondo gris','Vinil one vision','Vinil transparente','Laminado'],
+  senalizacion: ['Acrílico','Sintra','Aluminio','Vinil','Metal / inox'],
+  personalizacion: ['Sello','Taza','Textil','Bolígrafo','Llavero','Acrílico','Sintra'],
+  servicios: ['Acrílico','MDF','Madera','Vinil'],
   offset: ['Bond 20','Bond 24','NCR','Cartonite','Opalina'],
   rotulos: ['Sintra','Vinil','Vinil fondo gris','Vinil one vision','Vinil transparente','Banner','Acrílico'],
-  impresion: ['Banner','Vinil transparente'],
+  impresion: ['Bond 20','Bond 24','NCR','Cartonite','Opalina','Banner','Vinil transparente'],
   laser: ['Acrílico'],
   otros: []
 };
+// Si lo guardado en la nube no trae las áreas nuevas, se completan con sus valores de fábrica
+function asegurarTiposOP(){
+  Object.keys(OP_PROCESOS_DEFAULT).forEach(k=>{ if(!procesosPorTipo[k]) procesosPorTipo[k] = JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT[k])); });
+  Object.keys(OP_MATERIALES_DEFAULT).forEach(k=>{ if(!materialesPorTipo[k]) materialesPorTipo[k] = JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT[k])); });
+}
 let procesosPorTipo = JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
 let materialesPorTipo = JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
 let opTipoActual = null;
@@ -1024,11 +1053,11 @@ function opTipoIndicatorHtml(tipoKey, categoriaOtros){
 function procesosDeTipo(tipo){ return (procesosPorTipo && procesosPorTipo[tipo]) ? procesosPorTipo[tipo] : (OP_PROCESOS_DEFAULT[tipo]||[]); }
 function materialesDeTipo(tipo){ return (materialesPorTipo && materialesPorTipo[tipo]) ? materialesPorTipo[tipo] : (OP_MATERIALES_DEFAULT[tipo]||[]); }
 function sugerirTipoPorCategoria(categoria){
+  if(CATEGORIA_A_TIPO_OP[categoria]) return CATEGORIA_A_TIPO_OP[categoria];
   const mapa = {
-    'Offset':'offset',
-    'Rótulo':'rotulos','Rotulación':'rotulos','Vinil Cortado':'rotulos','Pandereta':'rotulos','Pintura':'rotulos',
-    'Acrílico':'laser','Láser':'laser',
-    'Digital':'impresion','Fotografía':'impresion','Stickers':'impresion'
+    'Offset':'impresion','Digital':'impresion','Stickers':'impresion',
+    'Rótulo':'letreros','Acrílico':'letreros','Pandereta':'letreros','Pintura':'rotulacion',
+    'Vinil Cortado':'servicios','Láser':'servicios','Fotografía':'servicios'
   };
   return mapa[categoria] || null;
 }
@@ -1488,7 +1517,13 @@ function editarMetas(){
 }
 function migrarNombresDeEstado(){
   let cambiado = false;
+  asegurarTiposOP();
   items.forEach(it=>{
+    if(it.categoria && !CATEGORIAS_BASE.includes(it.categoria) && CATEGORIAS_MIGRACION[it.categoria]){
+      it.categoriaAnterior = it.categoria;
+      it.categoria = CATEGORIAS_MIGRACION[it.categoria];
+      cambiado = true;
+    }
     if(ESTADOS_COTIZACION_VIEJOS[it.estado]){
       if(it.estado==='Cotizado' && !it.fechaCotizado) it.fechaCotizado = it.fechaRecibido || todayStr();
       it.estado = ESTADOS_COTIZACION_VIEJOS[it.estado];
@@ -1578,30 +1613,17 @@ async function saveCategoriasExtra(){
   catch(e){ /* no bloquea el flujo principal */ }
 }
 function allCategorias(){
-  const usadas = items.map(i=>i.categoria).filter(Boolean);
-  return Array.from(new Set([...CATEGORIAS_BASE, ...categoriasExtra, ...usadas]));
+  const anteriores = items.filter(i=>!i.papelera).map(i=>i.categoria).filter(c=>c && !CATEGORIAS_BASE.includes(c));
+  return Array.from(new Set([...CATEGORIAS_BASE, ...anteriores]));
 }
 function buildCategoriaSelect(selected){
   const sel = document.getElementById('f-categoria');
-  const opciones = allCategorias();
-  sel.innerHTML = opciones.map(c=>`<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('')
-    + '<option value="__add__">+ Agregar categoria...</option>';
+  const anterior = selected && !CATEGORIAS_BASE.includes(selected);
+  sel.innerHTML = `<option value="" ${!selected?'selected':''}>Elegir categoría...</option>`
+    + CATEGORIAS_BASE.map(c=>`<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('')
+    + (anterior ? `<option value="${selected}" selected>${selected} (antigua: elige una nueva)</option>` : '');
 }
-function handleCategoriaChange(sel){
-  if(sel.value === '__add__'){
-    const nueva = prompt('Nombre de la nueva categoria:');
-    if(nueva && nueva.trim()){
-      const limpia = nueva.trim();
-      if(!categoriasExtra.includes(limpia) && !CATEGORIAS_BASE.includes(limpia)){
-        categoriasExtra.push(limpia);
-        saveCategoriasExtra();
-      }
-      buildCategoriaSelect(limpia);
-    } else {
-      buildCategoriaSelect(CATEGORIAS_BASE[0]);
-    }
-  }
-}
+function handleCategoriaChange(sel){ /* categorías fijas: ya no se agregan nuevas */ }
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function saveItems(){
   localStorage.setItem('taller_taller-items', JSON.stringify(items));
@@ -1685,6 +1707,7 @@ function handleImportFile(ev){
       materialesExtra = nuevosMateriales;
       procesosPorTipo = nuevosProcesosPorTipo || JSON.parse(JSON.stringify(OP_PROCESOS_DEFAULT));
       materialesPorTipo = nuevosMaterialesPorTipo || JSON.parse(JSON.stringify(OP_MATERIALES_DEFAULT));
+      asegurarTiposOP(); migrarNombresDeEstado();
       if(nuevasMetas){ META_MIN = nuevasMetas.min || META_MIN; META_MAX = nuevasMetas.max || META_MAX; CONC_MAX = nuevasMetas.conc || CONC_MAX; }
       saveItems();
       saveCategoriasExtra();
@@ -2017,6 +2040,7 @@ function openOrdenProduccion(id){
   const esNuevo = procesosGuardados.length===0 && materialesGuardados.length===0;
 
   opTipoActual = op.tipo || null;
+  if(!opTipoActual && esNuevo && CATEGORIA_A_TIPO_OP[it.categoria]) opTipoActual = CATEGORIA_A_TIPO_OP[it.categoria];   // el área sale sola de la categoría del proyecto
 
   const numeroPreview = op.numero || siguienteNumeroOP();
   document.getElementById('op-modal-titulo').textContent = `Orden de Producción #${String(numeroPreview).padStart(3,'0')}`;
@@ -2295,7 +2319,7 @@ function opCardHtml(it){
         </div>
         <div class="op-card-head-row">
           <span class="cat-tag">${it.categoria||'-'}</span>
-          ${op && op.tipo ? `<span class="cat-tag">${op.tipo==='otros' && op.categoriaOtros ? 'Otros — '+op.categoriaOtros : tipoLabel(op.tipo)}</span>` : ''}
+          ${op && op.tipo && tipoLabel(op.tipo)!==it.categoria ? `<span class="cat-tag">${op.tipo==='otros' && op.categoriaOtros ? 'Otros — '+op.categoriaOtros : tipoLabel(op.tipo)}</span>` : ''}
         </div>
       </div>
       <div class="op-card-client">${it.cliente}</div>
@@ -2792,6 +2816,7 @@ function openModal(prefillId){
     toggleFechaPagoVisible();
     fieldEstado.style.display = 'block';
     btnDelete.style.display = 'block';
+    document.getElementById('btn-duplicar').style.display = 'block';
     document.getElementById('field-historial-btn').style.display = 'block';
     document.getElementById('field-print-btn').style.display = 'block';
     document.getElementById('field-op-btn').style.display = opDisponible(it) ? 'block' : 'none';
@@ -2825,9 +2850,10 @@ function openModal(prefillId){
     actualizarCamposPorTipoCliente();
     document.getElementById('f-numero-oc').disabled = true;
     catSel.value = 'Offset';
-    buildCategoriaSelect('Offset');
+    buildCategoriaSelect('');
     fieldEstado.style.display = 'none';
     btnDelete.style.display = 'none';
+    document.getElementById('btn-duplicar').style.display = 'none';
     document.getElementById('field-historial-btn').style.display = 'none';
     document.getElementById('field-print-btn').style.display = 'none';
     document.getElementById('field-op-btn').style.display = 'none';
@@ -2843,6 +2869,7 @@ function resolvedCategoria(){
 function saveModal(){
   const cliente = document.getElementById('f-cliente').value.trim().toUpperCase();
   if(!cliente){ showAlert('Escribe el nombre del cliente.'); return; }
+  if(!document.getElementById('f-categoria').value){ showAlert('Elige la categoría del proyecto: Letreros, Impresión, Rotulación, Señalización, Servicios o Personalización.'); return; }
   const tipoClienteVal = resolvedTipoCliente();
   if(!editingId && !tipoClienteVal){ showAlert('Selecciona el Tipo de Cliente: Counter o Corporativo.'); return; }
   const esModalCotizacionGuardado = esModalCotizacion();
@@ -2940,6 +2967,39 @@ function saveModal(){
   render();
 }
 
+// Crea un proyecto nuevo a partir de uno existente: mismos datos de trabajo, fecha de hoy y estado inicial.
+function duplicarDesdeModal(){
+  if(!editingId) return;
+  const orig = items.find(i=>i.id===editingId);
+  if(!orig) return;
+  const hoy = todayStr();
+  const esCot = orig.origen==='cotizacion';
+  const estadoInicial = esCot ? 'Por cotizar' : 'Pendiente';
+  const copia = {
+    id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    origen: orig.origen, cliente: orig.cliente, tipoCliente: orig.tipoCliente, categoria: orig.categoria,
+    prioridad: orig.prioridad, descripcion: orig.descripcion, monto: orig.monto, canal: orig.canal,
+    notas: orig.notas||'', tieneOC: false, numeroOC: '',
+    fechaRecibido: hoy, fechaLimite: null, fechaUltimoCambio: hoy,
+    fechaCotizado: null, fechaAprobado: null, fechaCerrado: null,
+    estado: estadoInicial, archivado: false,
+    facturado: false, fechaFacturado: null, pagoContado: false, fechaPagoContado: null,
+    pendientePago: false, fechaPendientePago: null, abonos: [],
+    historial: [{estado: estadoInicial, ts: new Date().toISOString()}]
+  };
+  if(orig.ordenProduccion && opTieneContenido(orig.ordenProduccion)){
+    const op = JSON.parse(JSON.stringify(orig.ordenProduccion));
+    op.numero = siguienteNumeroOP();
+    op.archivada = false; op.fechaArchivada = null; op.fechaCompletada = null; op.fechaEntrega = null;
+    (op.procesos||[]).forEach(p=>{ p.completado = false; });
+    copia.ordenProduccion = op;
+  }
+  items.push(copia);
+  saveItems();
+  closeModal();
+  render();
+  openModal(copia.id);
+}
 async function deleteFromModal(){
   if(!editingId) return;
   if(!(await showConfirm('Este proyecto se movera a la Papelera y se eliminara para siempre en 30 dias. Puedes restaurarlo antes de eso desde Archivo. ¿Confirmas?'))) return;
@@ -3684,7 +3744,7 @@ function pronRowHtml(it, i, extra){
 // ---- Control de proyectos: nada queda huérfano ----
 const AUD_NOMBRES = {
   a_sinmonto:'Sin monto', a_sinfecha:'Facturado o pagado sin fecha', a_sincobrar:'Entregados sin facturar o cobrar',
-  a_archivado:'Archivados sin cerrar', a_estancado:'Sin movimiento hace más de 30 días', a_sintipo:'Sin tipo de cliente', a_estado:'Estado desconocido'
+  a_sincat:'Sin categoría nueva', a_archivado:'Archivados sin cerrar', a_estancado:'Sin movimiento hace más de 30 días', a_sintipo:'Sin tipo de cliente', a_estado:'Estado desconocido'
 };
 function pronAuditoria(){
   const esCot = it => ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO;
@@ -3696,6 +3756,7 @@ function pronAuditoria(){
   vivos.forEach(it=>{
     const monto = Number(it.monto)||0;
     if(!ALL_ESTADOS.includes(it.estado)){ add('a_estado',it,'Estado: '+(it.estado||'vacío')); return; }
+    if(it.estado!==ESTADO_RECHAZADO && !CATEGORIAS_BASE.includes(it.categoria)) add('a_sincat',it, it.categoria ? 'Categoría antigua: '+it.categoria : 'Sin categoría');
     if(esCot(it)) return;
     if(monto<=0) add('a_sinmonto',it,'');
     if(it.facturado && !it.fechaFacturado) add('a_sinfecha',it,'Facturado sin fecha de factura');

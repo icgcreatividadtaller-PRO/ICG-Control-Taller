@@ -957,7 +957,7 @@ function estadoTxt(e, it){
 const PHASES = [
   { name:'Por Iniciar', key:'pendiente', estados:['Pendiente','Aprobado'] },
   { name:'En curso', key:'encurso', estados:['En proceso','En proceso de diseño','En producción'] },
-  { name:'Completado', key:'completado', estados:['Completado','Listo para entrega','Entregado','Pendiente de pago'] }
+  { name:'Completado', key:'completado', estados:['Listo para entrega','Entregado','Pendiente de pago'] }
 ];
 const ESTADO_RECHAZADO = 'No aprobado';
 const ALL_ESTADOS = ['Pendiente', ...ESTADOS_COTIZACION, ...PHASES.flatMap(p=>p.estados).filter(e=>e!=='Pendiente'), ESTADO_RECHAZADO];
@@ -1536,12 +1536,15 @@ function migrarNombresDeEstado(){
       it.historial.forEach(h=>{ if(ESTADOS_COTIZACION_VIEJOS[h.estado]){ h.estado = ESTADOS_COTIZACION_VIEJOS[h.estado]; cambiado = true; } });
     }
     if(it.estado === 'En revisión'){
-      it.estado = 'Completado';
+      it.estado = 'Listo para entrega';
       it.fechaUltimoCambio = todayStr();
       if(!it.historial) it.historial = [];
-      it.historial.push({estado:'Completado', ts:new Date().toISOString()});
+      it.historial.push({estado:'Listo para entrega', ts:new Date().toISOString()});
       cambiado = true;
     }
+    // El estado "Completado" ya no existe: pasa a "Listo para entrega"
+    if(it.estado === 'Completado'){ it.estado = 'Listo para entrega'; cambiado = true; }
+    if(it.historial){ it.historial.forEach(h=>{ if(h.estado === 'Completado'){ h.estado = 'Listo para entrega'; cambiado = true; } }); }
     if(it.pausado && !puedePausar(it)){
       it.pausado = false;
       cambiado = true;
@@ -1580,13 +1583,12 @@ function migrarNombresDeEstado(){
         const fecha = toDs(new Date(ultimoCotizado.ts));
         if(it.fechaCotizado !== fecha){ it.fechaCotizado = fecha; cambiado = true; }
       }
-      if(ultimoAprobado){
-        const fecha = toDs(new Date(ultimoAprobado.ts));
-        if(it.fechaAprobado !== fecha){ it.fechaAprobado = fecha; cambiado = true; }
+      // Solo se rellenan si faltan: una fecha puesta a mano (p.ej. la de entrega) nunca se pisa con la del historial
+      if(ultimoAprobado && !it.fechaAprobado){
+        it.fechaAprobado = toDs(new Date(ultimoAprobado.ts)); cambiado = true;
       }
-      if(ultimoEntregado){
-        const fecha = toDs(new Date(ultimoEntregado.ts));
-        if(it.fechaCerrado !== fecha){ it.fechaCerrado = fecha; cambiado = true; }
+      if(ultimoEntregado && !it.fechaCerrado){
+        it.fechaCerrado = toDs(new Date(ultimoEntregado.ts)); cambiado = true;
       }
     }
     if(it.pendientePago && it.estado==='Entregado'){ it.estado = ESTADO_PENDIENTE_PAGO; cambiado = true; }
@@ -1967,7 +1969,7 @@ function refreshArchivarOPDisabled(){
   btn.title = habilitado ? '' : 'Solo se puede archivar cuando todos los procesos estan al 100%';
 }
 function renderOpEstadoBotones(it){
-  const estados = ['Completado','Listo para entrega','Entregado'];
+  const estados = ['Listo para entrega','Entregado'];
   document.getElementById('op-estado-botones').innerHTML = estados.map(e=>{
     const activo = it.estado === e;
     return `<button type="button" class="btn-ghost" style="flex:1; ${activo?'background:var(--brand); color:#fff; border-color:var(--brand);':''}" onclick="opAvanzarEstado('${e}')">${e}</button>`;
@@ -3666,7 +3668,6 @@ function pronMoney(n){ return '$' + Math.round(Number(n)||0).toLocaleString('en-
 function pronAvance(it){
   if(CERRADOS.includes(it.estado)) return 100;
   if(it.estado==='Listo para entrega') return 95;
-  if(it.estado==='Completado') return 90;
   const op = it.ordenProduccion;
   if(op && Array.isArray(op.procesos) && op.procesos.length) return opProgress(op).pct;
   if(it.estado==='En producción') return 50;
@@ -3713,7 +3714,7 @@ function pronCalcular(offset){
     return ab>0 ? Object.assign({}, it, {monto: Math.max(0,(Number(it.monto)||0)-ab), _saldo:true, _abonado:ab}) : it;
   });
   const yaCobrado = it => it.facturado || it.pagoContado;
-  const enProd = ['En proceso','En proceso de diseño','En producción','Completado','Listo para entrega'];
+  const enProd = ['En proceso','En proceso de diseño','En producción','Listo para entrega'];
   vivos.forEach(it=>{
     const cot = ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO;
     if(it.estado==='Enviada'){ if(!it.archivado) R.potencial.push(it); return; }
@@ -3798,7 +3799,7 @@ function pronAuditoria(){
       else if(d!==null && d>30) add('a_sincobrar',it,'Entregado hace '+d+' días sin '+(it.tipoCliente==='counter'?'cobrar':'facturar'));
     }
     if(it.archivado && !CERRADOS.includes(it.estado)) add('a_archivado',it,'Archivado en estado '+estadoTxt(it.estado,it));
-    if(!it.archivado && ['En proceso','En proceso de diseño','En producción','Completado','Listo para entrega'].includes(it.estado)){
+    if(!it.archivado && ['En proceso','En proceso de diseño','En producción','Listo para entrega'].includes(it.estado)){
       const d = dias(it.fechaUltimoCambio); if(d!==null && d>30) add('a_estancado',it,'Sin cambios hace '+d+' días');
     }
     if(!it.tipoCliente) add('a_sintipo',it,'');

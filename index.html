@@ -1857,6 +1857,12 @@ function advanceCard(id, ev){
   saveItems(); render();
 }
 
+// Un proyecto no puede aprobarse después de entregarse: si la fecha de entrega (puesta a mano) es anterior
+// a la de aprobación registrada, para los resúmenes la aprobación cuenta el día de la entrega.
+function fechaAprobadoEf(it){
+  if(it.fechaAprobado && it.fechaCerrado && it.fechaAprobado > it.fechaCerrado) return it.fechaCerrado;
+  return it.fechaAprobado;
+}
 function applyEstadoTransition(it, nuevoEstado){
   const prev = it.estado;
   if(nuevoEstado !== prev){
@@ -3589,7 +3595,7 @@ function renderResumenDiario(){
   const hoy = todayStr();
   const registradosList = items.filter(it=>it.fechaRecibido===hoy);
   const cotizadosList = items.filter(it=>it.fechaCotizado===hoy);
-  const aprobadosList = items.filter(it=>it.fechaAprobado===hoy);
+  const aprobadosList = items.filter(it=>fechaAprobadoEf(it)===hoy);
   const entregadosList = items.filter(it=>it.fechaCerrado===hoy);
   const registrados = registradosList.length;
   const cotizados = cotizadosList.length;
@@ -4082,7 +4088,7 @@ function renderResumen(){
   const inRange = ds => ds && ds>=mondayDs && ds<=sundayDs;
 
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
-  const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
+  const aprobadosList = items.filter(it=>inRange(fechaAprobadoEf(it)));
   const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
   const facturadoList = facturadoEnRango(mondayDs, sundayDs).lista;
   const cotizados = cotizadosList.length;
@@ -4181,7 +4187,7 @@ function renderResumenMensual(){
   const inRange = ds => ds && ds>=firstDs && ds<=lastDs;
 
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
-  const aprobadosList = items.filter(it=>inRange(it.fechaAprobado));
+  const aprobadosList = items.filter(it=>inRange(fechaAprobadoEf(it)));
   const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
   const facturadoList = facturadoEnRango(firstDs, lastDs).lista;
   const opCompletadasList = items.filter(it=>!it.papelera && opTieneContenido(it.ordenProduccion) && opEstaCompletada(it) && inRange(opFechaCompletada(it)));

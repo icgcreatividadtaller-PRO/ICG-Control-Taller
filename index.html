@@ -673,7 +673,7 @@
       <div class="field" id="field-limite-line"><label>Fecha limite</label><input type="date" id="f-limite" style="text-transform:none;"></div>
     </div>
     <div class="grid2" id="field-fecha-entrega-row">
-      <div class="field"><label>Fecha de Entrega</label><input type="date" id="f-fecha-entrega" style="text-transform:none;"></div>
+      <div class="field"><label>Fecha de Entrega</label><input type="date" id="f-fecha-entrega" style="text-transform:none;" onchange="avisoFechaEntregaModal(this.value)"></div>
     </div>
     <div class="oc-line" id="field-tiene-oc-line">
       <input type="checkbox" id="f-tiene-oc" onchange="document.getElementById('f-numero-oc').disabled=!this.checked">
@@ -874,6 +874,23 @@
     <div class="modal-actions" style="justify-content:flex-end;">
       <button class="btn-ghost" onclick="resolveCustomConfirm(false)">Cancelar</button>
       <button class="btn-primary" style="margin-left:0;" onclick="resolveCustomConfirm(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-fecha-entrega" onclick="if(event.target===this) resolverFechaEntrega(null)">
+  <div class="modal" style="max-width:420px; margin-top:12vh;">
+    <h2 style="margin:0 0 6px;">&#128197; Confirma la fecha de entrega</h2>
+    <p style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:0 0 14px;">Esta fecha decide en qué semana cuenta el proyecto en los resúmenes y en el Pronóstico. Verifica que sea la correcta.</p>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input type="date" id="fe-fecha" oninput="actualizarSemanaFechaEntrega()" style="text-transform:none; flex:1; min-width:150px;">
+      <button type="button" class="btn-ghost" onclick="fijarFechaEntrega(0)">Hoy</button>
+      <button type="button" class="btn-ghost" onclick="fijarFechaEntrega(-1)">Ayer</button>
+    </div>
+    <div id="fe-semana" style="margin-top:10px; font-size:13px; font-weight:700; color:var(--brand); text-transform:none;"></div>
+    <div class="modal-actions" style="justify-content:flex-end; margin-top:18px;">
+      <button class="btn-ghost" onclick="resolverFechaEntrega(null)">Cancelar</button>
+      <button class="btn-primary" style="margin-left:0;" onclick="confirmarFechaEntrega()">Confirmar entrega</button>
     </div>
   </div>
 </div>
@@ -1804,6 +1821,7 @@ function actualizarNotaOrigen(){
   const nota = document.getElementById('origen-nota'); if(!nota) return;
   nota.style.display = (!editingId && !esModalCotizacion() && document.getElementById('f-origen').value==='cotizacion') ? '' : 'none';
 }
+function avisoFechaEntregaModal(v){ if(v) showToast('Fecha de entrega: '+fmtDate(v)+'. '+textoSemana(v)); }
 let toastTimer = null;
 function showToast(msg){
   let t = document.getElementById('toast-aviso');
@@ -1849,13 +1867,13 @@ function marcarPagadoDesdeCard(id, ev){
   it.fechaPagoContado = todayStr();
   saveItems(); render();
 }
-function advanceCard(id, ev){
+async function advanceCard(id, ev){
   ev.stopPropagation();
   const it = items.find(i=>i.id===id);
   if(!it) return;
   const next = nextEstadoFor(it);
   if(!next) return;
-  applyEstadoTransition(it, next);
+  if(!(await cambiarEstadoConFecha(it, next))){ render(); return; }
   saveItems(); render();
 }
 
@@ -1975,10 +1993,10 @@ function renderOpEstadoBotones(it){
     return `<button type="button" class="btn-ghost" style="flex:1; ${activo?'background:var(--brand); color:#fff; border-color:var(--brand);':''}" onclick="opAvanzarEstado('${e}')">${e}</button>`;
   }).join('');
 }
-function opAvanzarEstado(estadoTarget){
+async function opAvanzarEstado(estadoTarget){
   const it = items.find(i=>i.id===opItemId);
   if(!it) return;
-  applyEstadoTransition(it, estadoTarget);
+  if(!(await cambiarEstadoConFecha(it, estadoTarget))) return;
   saveItems();
   renderOpEstadoBotones(it);
   refreshArchivarOPDisabled();
@@ -2659,6 +2677,53 @@ function showAlert(msg){
 function closeCustomAlert(){
   document.getElementById('overlay-custom-alert').classList.remove('open');
 }
+let _fechaEntregaResolve = null;
+function semanaDeFecha(ds){
+  const d = new Date(ds+'T00:00:00'); const dia = (d.getDay()+6)%7;
+  const lun = new Date(d); lun.setDate(d.getDate()-dia);
+  const dom = new Date(lun); dom.setDate(lun.getDate()+6);
+  return {lun:toDs(lun), dom:toDs(dom)};
+}
+function textoSemana(ds){
+  if(!ds) return '';
+  const w = semanaDeFecha(ds); const hoySem = semanaDeFecha(todayStr());
+  const rel = w.lun===hoySem.lun ? ' (esta semana)' : (w.lun < hoySem.lun ? ' (semana pasada o anterior)' : ' (semana futura)');
+  return 'Cuenta en la semana del '+fmtDate(w.lun)+' al '+fmtDate(w.dom)+rel;
+}
+function actualizarSemanaFechaEntrega(){ document.getElementById('fe-semana').textContent = textoSemana(document.getElementById('fe-fecha').value); }
+function fijarFechaEntrega(offsetDias){ const d = new Date(); d.setDate(d.getDate()+offsetDias); document.getElementById('fe-fecha').value = toDs(d); actualizarSemanaFechaEntrega(); }
+function pedirFechaEntrega(def){
+  document.getElementById('fe-fecha').value = def || todayStr();
+  actualizarSemanaFechaEntrega();
+  document.getElementById('overlay-fecha-entrega').classList.add('open');
+  return new Promise(res=>{ _fechaEntregaResolve = res; });
+}
+function resolverFechaEntrega(v){
+  document.getElementById('overlay-fecha-entrega').classList.remove('open');
+  if(_fechaEntregaResolve){ const r = _fechaEntregaResolve; _fechaEntregaResolve = null; r(v); }
+}
+function confirmarFechaEntrega(){
+  const v = document.getElementById('fe-fecha').value;
+  if(!v){ document.getElementById('fe-semana').textContent = 'Elige una fecha para continuar.'; return; }
+  resolverFechaEntrega(v);
+}
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('overlay-fecha-entrega').classList.contains('open')) return;
+  if(e.key==='Escape') resolverFechaEntrega(null);
+  if(e.key==='Enter'){ e.preventDefault(); confirmarFechaEntrega(); }
+});
+// Cambia el estado; si el proyecto pasa a Entregado / Pendiente de pago, pide confirmar la fecha de entrega.
+async function cambiarEstadoConFecha(it, nuevo, fechaPre){
+  const entrando = CERRADOS.includes(nuevo) && !CERRADOS.includes(it.estado);
+  let fecha = fechaPre || null;
+  if(entrando && !fecha){ fecha = await pedirFechaEntrega(todayStr()); if(!fecha) return false; }
+  applyEstadoTransition(it, nuevo);
+  if(entrando && fecha){
+    it.fechaCerrado = fecha;
+    if(it.fechaAprobado && it.fechaAprobado > fecha) it.fechaAprobado = fecha;
+  }
+  return true;
+}
 let _customConfirmResolve = null;
 function showConfirm(msg){
   document.getElementById('custom-confirm-message').textContent = msg;
@@ -2683,7 +2748,7 @@ document.addEventListener('keydown', e=>{
 document.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
   const abierto = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
-  if(abierto('overlay-custom-alert') || abierto('overlay-custom-confirm')) return; // ya los maneja su propio atajo
+  if(abierto('overlay-custom-alert') || abierto('overlay-custom-confirm') || abierto('overlay-fecha-entrega')) return; // ya los maneja su propio atajo
   const orden = [
     ['overlay-op-gestionar-lista', cerrarGestionLista],
     ['overlay-rezagados', closeRezagadosDialog],
@@ -2890,7 +2955,7 @@ function resolvedCategoria(){
   return document.getElementById('f-categoria').value;
 }
 
-function saveModal(){
+async function saveModal(){
   const cliente = document.getElementById('f-cliente').value.trim().toUpperCase();
   if(!cliente){ showAlert('Escribe el nombre del cliente.'); return; }
   if(!document.getElementById('f-categoria').value){ showAlert('Elige la categoría del proyecto: Letreros, Impresión, Rotulación, Señalización, Servicios o Personalización.'); return; }
@@ -2921,6 +2986,15 @@ function saveModal(){
     const prevEstado = it.estado;
     const prevTieneOC = it.tieneOC;
     let nuevoEstadoElegido = document.getElementById('f-estado').value;
+    {   // si el proyecto va a pasar a Entregado / Pendiente de pago, se confirma la fecha de entrega
+      const destino = nuevoEstadoElegido==='__PAGADO__' ? 'Entregado' : nuevoEstadoElegido;
+      const iraCerrado = CERRADOS.includes(destino) || (document.getElementById('f-pendiente-pago').checked && !it.pendientePago);
+      if(iraCerrado && !CERRADOS.includes(prevEstado)){
+        const fe = await pedirFechaEntrega(document.getElementById('f-fecha-entrega').value || todayStr());
+        if(!fe) return;
+        document.getElementById('f-fecha-entrega').value = fe;
+      }
+    }
     const facturadoNuevo = document.getElementById('f-facturado').checked;
     let pagoContadoNuevo = document.getElementById('f-pago-contado').checked;
     let pendientePagoNuevo = document.getElementById('f-pendiente-pago').checked;
@@ -3079,25 +3153,30 @@ function cyclePrioridad(id, ev){
   saveItems(); render();
 }
 
-function quickEstado(id, val){
+async function quickEstado(id, val){
   const it = items.find(i=>i.id===id);
   if(!it) return;
-  applyEstadoTransition(it, val);
+  if(!(await cambiarEstadoConFecha(it, val))){ render(); return; }
   saveItems(); render();
 }
-function quickEstadoOrPausa(id, val){
+async function quickEstadoOrPausa(id, val){
   const it = items.find(i=>i.id===id);
   if(!it) return;
   if(val==='__PAUSADO__'){
     pausarProyecto(id);
     return;
   }
+  let fechaEnt = null;
+  if(CERRADOS.includes(val) && !CERRADOS.includes(it.estado)){
+    fechaEnt = await pedirFechaEntrega(todayStr());
+    if(!fechaEnt){ render(); return; }
+  }
   if(it.pausado){
     it.pausado = false;
     if(!it.historial) it.historial = [];
     it.historial.push({estado:'Reanudado', ts:new Date().toISOString()});
   }
-  applyEstadoTransition(it, val);
+  await cambiarEstadoConFecha(it, val, fechaEnt);
   saveItems(); render();
 }
 
@@ -3214,13 +3293,13 @@ function onDragStart(ev, id){ dragId = id; ev.target.classList.add('dragging'); 
 function onDragEnd(ev){ ev.target.classList.remove('dragging'); }
 function onColDragOver(ev){ ev.preventDefault(); ev.currentTarget.classList.add('dragover'); }
 function onColDragLeave(ev){ ev.currentTarget.classList.remove('dragover'); }
-function onColDrop(ev, estado){
+async function onColDrop(ev, estado){
   ev.preventDefault();
   ev.currentTarget.classList.remove('dragover');
   if(!dragId) return;
   const it = items.find(i=>i.id===dragId);
-  if(it && it.estado !== estado){ applyEstadoTransition(it, estado); saveItems(); }
   dragId = null;
+  if(it && it.estado !== estado){ if(await cambiarEstadoConFecha(it, estado)) saveItems(); }
   render();
 }
 

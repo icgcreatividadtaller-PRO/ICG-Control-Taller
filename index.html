@@ -674,6 +674,7 @@
     </div>
     <div class="grid2" id="field-fecha-entrega-row">
       <div class="field"><label>Fecha de Entrega</label><input type="date" id="f-fecha-entrega" style="text-transform:none;" onchange="avisoFechaEntregaModal(this.value)"></div>
+      <div class="field" id="field-btn-cerrar" style="display:flex; align-items:flex-end;"><button type="button" class="btn-primary" id="btn-cerrar-proyecto" style="width:100%;" onclick="cerrarProyectoDesdeModal()">CERRAR</button></div>
     </div>
     <div class="oc-line" id="field-tiene-oc-line">
       <input type="checkbox" id="f-tiene-oc" onchange="document.getElementById('f-numero-oc').disabled=!this.checked">
@@ -826,7 +827,7 @@
     </div>
     <div class="grid2">
       <div class="field"><label>Tiempo estimado</label><input id="op-tiempo" placeholder="Ej: 2 días" style="text-transform:none;"></div>
-      <div class="field"><label>Fecha de entrega</label><input type="date" id="op-fecha-entrega" style="text-transform:none;"></div>
+      <div class="field"><label>Fecha de entrega</label><input type="date" id="op-fecha-entrega" style="text-transform:none;" onchange="opFechaEntregaCambio(this.value)"></div>
     </div>
     <div class="field"><label>Notas técnicas de producción</label><textarea id="op-notas" placeholder="Instrucciones para el operario" style="text-transform:none;"></textarea></div>
     <div class="field" id="op-archivar-field"></div>
@@ -1604,7 +1605,7 @@ function migrarNombresDeEstado(){
       if(ultimoAprobado && !it.fechaAprobado){
         it.fechaAprobado = toDs(new Date(ultimoAprobado.ts)); cambiado = true;
       }
-      if(ultimoEntregado && !it.fechaCerrado){
+      if(ultimoEntregado && !it.fechaCerrado && CERRADOS.includes(it.estado)){
         it.fechaCerrado = toDs(new Date(ultimoEntregado.ts)); cambiado = true;
       }
     }
@@ -1772,6 +1773,7 @@ function aplicarModoCotizacion(){
   document.getElementById('field-origen-line').style.display = esCot ? 'none' : '';
   document.getElementById('field-limite-line').style.display = esCot ? 'none' : '';
   document.getElementById('field-fecha-entrega-row').style.display = esCot ? 'none' : '';
+  actualizarBotonCerrar();
   document.getElementById('field-fecha-envio').style.display = esCot ? '' : 'none';
   document.getElementById('lbl-fecha-recepcion').textContent = esCot ? 'Fecha de solicitud' : 'Fecha de recepcion';
 }
@@ -1820,6 +1822,34 @@ function tipoClienteTag(it){
 function actualizarNotaOrigen(){
   const nota = document.getElementById('origen-nota'); if(!nota) return;
   nota.style.display = (!editingId && !esModalCotizacion() && document.getElementById('f-origen').value==='cotizacion') ? '' : 'none';
+}
+let _cierreConfirmado = false;
+function actualizarBotonCerrar(){
+  const b = document.getElementById('btn-cerrar-proyecto'); const w = document.getElementById('field-btn-cerrar');
+  if(!b) return;
+  const it = editingId ? items.find(i=>i.id===editingId) : null;
+  w.style.display = (it && !esModalCotizacion() && !CERRADOS.includes(it.estado)) ? 'flex' : 'none';
+}
+async function cerrarProyectoDesdeModal(){
+  const it = editingId ? items.find(i=>i.id===editingId) : null;
+  if(!it) return;
+  const sel = document.getElementById('f-estado');
+  if(CERRADOS.includes(it.estado)){
+    if(!(await showConfirm('¿Reabrir este proyecto? Pasará a "En proceso" y se borrará su fecha de entrega.'))) return;
+    sel.value = 'En proceso'; handleEstadoSelectChange();
+    document.getElementById('f-fecha-entrega').value = '';
+    saveModal(); return;
+  }
+  const f = document.getElementById('f-fecha-entrega');
+  if(!f.value){
+    showToast('Pon la fecha de entrega y vuelve a tocar CERRAR');
+    f.focus(); try{ f.showPicker(); }catch(e){}
+    return;
+  }
+  if(!sel.querySelector('option[value="Entregado"]')){ showAlert('Este proyecto no se puede cerrar desde aquí.'); return; }
+  sel.value = 'Entregado'; handleEstadoSelectChange();
+  _cierreConfirmado = true;
+  saveModal();
 }
 function avisoFechaEntregaModal(v){ if(v) showToast('Fecha de entrega: '+fmtDate(v)+'. '+textoSemana(v)); }
 let toastTimer = null;
@@ -1879,6 +1909,8 @@ async function advanceCard(id, ev){
 
 // Un proyecto no puede aprobarse después de entregarse: si la fecha de entrega (puesta a mano) es anterior
 // a la de aprobación registrada, para los resúmenes la aprobación cuenta el día de la entrega.
+// "Cerrado" = estado Entregado o Pendiente de pago Y con fecha de entrega aplicada.
+function fechaEntregaEf(it){ return CERRADOS.includes(it.estado) ? (it.fechaCerrado||null) : null; }
 function fechaAprobadoEf(it){
   if(it.fechaAprobado && it.fechaCerrado && it.fechaAprobado > it.fechaCerrado) return it.fechaCerrado;
   return it.fechaAprobado;
@@ -1892,6 +1924,7 @@ function applyEstadoTransition(it, nuevoEstado){
     if(nuevoEstado==='Enviada') it.fechaCotizado = todayStr();
     if(nuevoEstado==='Aprobado') it.fechaAprobado = todayStr();
     if(CERRADOS.includes(nuevoEstado) && !CERRADOS.includes(prev)) it.fechaCerrado = todayStr();
+    if(!CERRADOS.includes(nuevoEstado) && CERRADOS.includes(prev)) it.fechaCerrado = null;
     if(it.pausado){ it.pausado = false; }
   }
   it.estado = nuevoEstado;
@@ -1993,9 +2026,36 @@ function renderOpEstadoBotones(it){
     return `<button type="button" class="btn-ghost" style="flex:1; ${activo?'background:var(--brand); color:#fff; border-color:var(--brand);':''}" onclick="opAvanzarEstado('${e}')">${e}</button>`;
   }).join('');
 }
+let opPendienteCierre = null;
+function opIrAFechaEntrega(estadoTarget){
+  opPendienteCierre = estadoTarget;
+  const f = document.getElementById('op-fecha-entrega');
+  f.value = '';
+  f.scrollIntoView({block:'center', behavior:'smooth'});
+  f.style.outline = '3px solid #FDC901';
+  f.focus(); try{ f.showPicker(); }catch(e){}
+  showToast('Pon la FECHA DE ENTREGA para marcar el proyecto como ' + estadoTarget);
+}
+async function opFechaEntregaCambio(v){
+  const it = items.find(i=>i.id===opItemId);
+  if(!it || !v) return;
+  const f = document.getElementById('op-fecha-entrega');
+  if(opPendienteCierre){
+    const destino = opPendienteCierre; opPendienteCierre = null; f.style.outline = '';
+    await cambiarEstadoConFecha(it, destino, v);
+    saveItems(); renderOpEstadoBotones(it); refreshArchivarOPDisabled(); render();
+    showToast('Entregado el ' + fmtDate(v) + '. ' + textoSemana(v));
+  } else if(CERRADOS.includes(it.estado)){
+    it.fechaCerrado = v;
+    if(it.fechaAprobado && it.fechaAprobado > v) it.fechaAprobado = v;
+    saveItems(); render();
+    showToast('Fecha de entrega: ' + fmtDate(v) + '. ' + textoSemana(v));
+  }
+}
 async function opAvanzarEstado(estadoTarget){
   const it = items.find(i=>i.id===opItemId);
   if(!it) return;
+  if(CERRADOS.includes(estadoTarget) && !CERRADOS.includes(it.estado)){ opIrAFechaEntrega(estadoTarget); return; }
   if(!(await cambiarEstadoConFecha(it, estadoTarget))) return;
   saveItems();
   renderOpEstadoBotones(it);
@@ -2148,7 +2208,8 @@ function openOrdenProduccion(id){
   document.getElementById('op-tamano').value = op.tamano || '';
   document.getElementById('op-cantidad').value = op.cantidad || '';
   document.getElementById('op-tiempo').value = op.tiempoEstimado || '';
-  document.getElementById('op-fecha-entrega').value = (op.fechaEntrega !== undefined && op.fechaEntrega !== null) ? op.fechaEntrega : (it.fechaLimite || '');
+  opPendienteCierre = null; document.getElementById('op-fecha-entrega').style.outline = '';
+  document.getElementById('op-fecha-entrega').value = CERRADOS.includes(it.estado) ? (it.fechaCerrado || '') : ((op.fechaEntrega !== undefined && op.fechaEntrega !== null) ? op.fechaEntrega : '');
   document.getElementById('op-notas').value = (op.notas !== undefined && op.notas !== null) ? op.notas : (it.notas || '');
   document.getElementById('overlay-op').classList.add('open');
 }
@@ -2248,6 +2309,12 @@ function desarchivarOP(){
 function saveOrdenProduccion(){
   const it = items.find(i=>i.id===opItemId);
   if(!it) return;
+  if(opPendienteCierre && !document.getElementById('op-fecha-entrega').value){
+    const f = document.getElementById('op-fecha-entrega');
+    f.scrollIntoView({block:'center'}); f.focus(); try{ f.showPicker(); }catch(e){}
+    showToast('Falta la FECHA DE ENTREGA para marcar el proyecto como ' + opPendienteCierre);
+    return;
+  }
   const numeroPrevio = it.ordenProduccion ? it.ordenProduccion.numero : null;
   const archivadaPrevia = it.ordenProduccion ? it.ordenProduccion.archivada : false;
   const fechaArchivadaPrevia = it.ordenProduccion ? it.ordenProduccion.fechaArchivada : null;
@@ -2877,6 +2944,7 @@ function openModal(prefillId){
     document.getElementById('f-fecha').value = it.fechaRecibido;
     document.getElementById('f-limite').value = it.fechaLimite||'';
     document.getElementById('f-fecha-entrega').value = it.fechaCerrado||'';
+    _cierreConfirmado = false;
     document.getElementById('f-tiene-oc').checked = it.tieneOC;
     document.getElementById('f-facturado').checked = !!it.facturado;
     document.getElementById('f-fecha-facturado').value = it.fechaFacturado || '';
@@ -2990,9 +3058,13 @@ async function saveModal(){
       const destino = nuevoEstadoElegido==='__PAGADO__' ? 'Entregado' : nuevoEstadoElegido;
       const iraCerrado = CERRADOS.includes(destino) || (document.getElementById('f-pendiente-pago').checked && !it.pendientePago);
       if(iraCerrado && !CERRADOS.includes(prevEstado)){
-        const fe = await pedirFechaEntrega(document.getElementById('f-fecha-entrega').value || todayStr());
-        if(!fe) return;
-        document.getElementById('f-fecha-entrega').value = fe;
+        const feActual = document.getElementById('f-fecha-entrega').value;
+        if(_cierreConfirmado && feActual){ _cierreConfirmado = false; }
+        else {
+          const fe = await pedirFechaEntrega(feActual || todayStr());
+          if(!fe) return;
+          document.getElementById('f-fecha-entrega').value = fe;
+        }
       }
     }
     const facturadoNuevo = document.getElementById('f-facturado').checked;
@@ -3031,7 +3103,9 @@ async function saveModal(){
     applyEstadoTransition(it, finalEstado);
     if(!pendientePagoNuevo && finalEstado!==ESTADO_PENDIENTE_PAGO){ it.pendientePago = false; it.fechaPendientePago = null; }
     const fechaEntregaManual = document.getElementById('f-fecha-entrega').value;
-    if(fechaEntregaManual){
+    if(!CERRADOS.includes(it.estado)){
+      it.fechaCerrado = null;
+    } else if(fechaEntregaManual){
       it.fechaCerrado = fechaEntregaManual;
       // no se puede aprobar después de entregar: la aprobación se ajusta a la fecha de entrega
       if(it.fechaAprobado && it.fechaAprobado > fechaEntregaManual) it.fechaAprobado = fechaEntregaManual;
@@ -3681,7 +3755,7 @@ function renderResumenDiario(){
   const registradosList = items.filter(it=>it.fechaRecibido===hoy);
   const cotizadosList = items.filter(it=>it.fechaCotizado===hoy);
   const aprobadosList = items.filter(it=>fechaAprobadoEf(it)===hoy);
-  const entregadosList = items.filter(it=>it.fechaCerrado===hoy);
+  const entregadosList = items.filter(it=>fechaEntregaEf(it)===hoy);
   const registrados = registradosList.length;
   const cotizados = cotizadosList.length;
   const aprobados = aprobadosList.length;
@@ -3857,7 +3931,7 @@ function pronRowHtml(it, i, extra){
 }
 // ---- Control de proyectos: nada queda huérfano ----
 const AUD_NOMBRES = {
-  a_sinmonto:'Sin monto', a_sinfecha:'Facturado o pagado sin fecha', a_sincobrar:'Entregados sin facturar o cobrar',
+  a_sinentrega:'Entregados sin fecha de entrega', a_sinmonto:'Sin monto', a_sinfecha:'Facturado o pagado sin fecha', a_sincobrar:'Entregados sin facturar o cobrar',
   a_sincat:'Sin categoría nueva', a_archivado:'Archivados sin cerrar', a_estancado:'Sin movimiento hace más de 30 días', a_sintipo:'Sin tipo de cliente', a_estado:'Estado desconocido'
 };
 function pronAuditoria(){
@@ -3872,6 +3946,7 @@ function pronAuditoria(){
     if(!ALL_ESTADOS.includes(it.estado)){ add('a_estado',it,'Estado: '+(it.estado||'vacío')); return; }
     if(it.estado!==ESTADO_RECHAZADO && !CATEGORIAS_BASE.includes(it.categoria)) add('a_sincat',it, it.categoria ? 'Categoría antigua: '+it.categoria : 'Sin categoría');
     if(esCot(it)) return;
+    if(CERRADOS.includes(it.estado) && !it.fechaCerrado) add('a_sinentrega',it,'Entregado sin fecha de entrega');
     if(monto<=0) add('a_sinmonto',it,'');
     if(it.facturado && !it.fechaFacturado) add('a_sinfecha',it,'Facturado sin fecha de factura');
     if(it.pagoContado && !it.fechaPagoContado) add('a_sinfecha',it,'Pagado sin fecha de pago');
@@ -4173,7 +4248,7 @@ function renderResumen(){
 
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
   const aprobadosList = items.filter(it=>inRange(fechaAprobadoEf(it)));
-  const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
+  const cerradosList = items.filter(it=>inRange(fechaEntregaEf(it)));
   const facturadoList = facturadoEnRango(mondayDs, sundayDs).lista;
   const cotizados = cotizadosList.length;
   const aprobados = aprobadosList.length;
@@ -4272,7 +4347,7 @@ function renderResumenMensual(){
 
   const cotizadosList = items.filter(it=>inRange(it.fechaCotizado));
   const aprobadosList = items.filter(it=>inRange(fechaAprobadoEf(it)));
-  const cerradosList = items.filter(it=>inRange(it.fechaCerrado));
+  const cerradosList = items.filter(it=>inRange(fechaEntregaEf(it)));
   const facturadoList = facturadoEnRango(firstDs, lastDs).lista;
   const opCompletadasList = items.filter(it=>!it.papelera && opTieneContenido(it.ordenProduccion) && opEstaCompletada(it) && inRange(opFechaCompletada(it)));
   const cotizados = cotizadosList.length;

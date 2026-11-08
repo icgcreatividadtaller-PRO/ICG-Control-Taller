@@ -2957,7 +2957,11 @@ function saveModal(){
     applyEstadoTransition(it, finalEstado);
     if(!pendientePagoNuevo && finalEstado!==ESTADO_PENDIENTE_PAGO){ it.pendientePago = false; it.fechaPendientePago = null; }
     const fechaEntregaManual = document.getElementById('f-fecha-entrega').value;
-    if(fechaEntregaManual) it.fechaCerrado = fechaEntregaManual;
+    if(fechaEntregaManual){
+      it.fechaCerrado = fechaEntregaManual;
+      // no se puede aprobar después de entregar: la aprobación se ajusta a la fecha de entrega
+      if(it.fechaAprobado && it.fechaAprobado > fechaEntregaManual) it.fechaAprobado = fechaEntregaManual;
+    }
     if(esModalCotizacionGuardado){
       const fechaEnvioManual = document.getElementById('f-fecha-envio').value;
       if(fechaEnvioManual && it.estado==='Enviada') it.fechaCotizado = fechaEnvioManual;

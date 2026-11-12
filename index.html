@@ -247,6 +247,15 @@
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .oc-line{display:flex; align-items:center; gap:8px; margin-bottom:12px;}
   .oc-line input[type=checkbox]{width:auto;}
+  .btn-op-estado{flex:1; padding:13px 10px; border-radius:12px; font-family:inherit; font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; border:1px solid; position:relative; top:0; transition:transform .08s ease, box-shadow .08s ease, filter .15s ease; -webkit-tap-highlight-color:transparent;}
+  .btn-op-estado:hover{filter:brightness(1.07);}
+  .btn-op-listo{background:linear-gradient(180deg,#FFE766 0%,#FDC901 55%,#EDB800 100%); color:#000080; border-color:#B58E00; box-shadow:0 5px 0 #9A7700, 0 9px 14px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.65), inset 0 -2px 0 rgba(0,0,0,.08);}
+  .btn-op-entregado{background:linear-gradient(180deg,#3535C0 0%,#000080 60%,#00006A 100%); color:#fff; border-color:#00003A; box-shadow:0 5px 0 #00002B, 0 9px 14px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(0,0,0,.2);}
+  .btn-op-estado:active, .btn-op-estado.pulsando{transform:translateY(4px);}
+  .btn-op-listo:active, .btn-op-listo.pulsando{box-shadow:0 1px 0 #9A7700, 0 3px 5px rgba(0,0,0,.25), inset 0 3px 6px rgba(0,0,0,.25);}
+  .btn-op-entregado:active, .btn-op-entregado.pulsando{box-shadow:0 1px 0 #00002B, 0 3px 5px rgba(0,0,0,.3), inset 0 3px 6px rgba(0,0,0,.4);}
+  .btn-op-estado.activo{outline:3px solid #fff; outline-offset:-6px; animation:opActivo 2.2s ease-in-out infinite;}
+  @keyframes opActivo{0%,100%{filter:brightness(1);}50%{filter:brightness(1.18);}}
   .toast-aviso{position:fixed; left:50%; bottom:28px; transform:translate(-50%,20px); background:#000080; color:#fff; padding:13px 22px; border-radius:12px; font-size:14px; font-weight:700; letter-spacing:.03em; box-shadow:0 10px 30px rgba(0,0,40,.35); border:1px solid rgba(253,201,1,.6); opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:9999; max-width:90vw; text-align:center;}
   .toast-aviso.show{opacity:1; transform:translate(-50%,0);}
   .modal-actions{display:flex; gap:8px; justify-content:space-between; margin-top:6px; align-items:center;}
@@ -474,6 +483,57 @@
   .login-btn:disabled{opacity:0.6; cursor:not-allowed;}
   .tool-btn.logout{background:rgba(218,15,72,0.16); border-color:var(--magenta); color:#ffcdd9;}
   .tool-btn.logout:hover{background:rgba(218,15,72,0.3);}
+
+  /* ===== VERSIÓN CELULAR (solo pantallas < 820px; la PC no se ve afectada) ===== */
+  .bottom-nav{display:none;}
+  @media (max-width:820px){
+    html,body{overflow-x:hidden;}
+    .main{padding:14px 12px 96px;}
+    #page-title{font-size:19px;}
+    /* barra inferior */
+    .bottom-nav{display:flex; position:fixed; left:0; right:0; bottom:0; z-index:800; background:#000080; padding:6px 4px calc(6px + env(safe-area-inset-bottom)); box-shadow:0 -4px 18px rgba(0,0,40,.35); border-top:2px solid #FDC901;}
+    .bn-item{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:54px; border:none; background:transparent; color:#B8C0F0; font-family:inherit; font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; border-radius:10px; cursor:pointer; position:relative; -webkit-tap-highlight-color:transparent; transition:transform .08s ease, background .15s ease;}
+    .bn-item .bn-ic{font-size:20px; line-height:1;}
+    .bn-item:active{transform:translateY(2px) scale(.96); background:rgba(255,255,255,.1);}
+    .bn-item.active{color:#FDC901; background:rgba(253,201,1,.14);}
+    .bn-item .bn-n{position:absolute; top:3px; right:calc(50% - 22px); min-width:16px; padding:0 4px; height:16px; border-radius:8px; background:#FDC901; color:#000080; font-size:9.5px; font-weight:800; display:flex; align-items:center; justify-content:center;}
+    .autosave-badge{bottom:84px; right:10px; padding:6px 11px; font-size:9.5px; opacity:.9;}
+    /* tocar con el dedo */
+    input[type=checkbox]{width:22px; height:22px;}
+    input, select, textarea{font-size:16px !important;}
+    .btn-primary, .btn-ghost, .tool-btn, .nav-item{min-height:44px;}
+    .nav-item{display:flex; align-items:center; justify-content:space-between;}
+    .search{max-width:none; flex:1 1 100%;}
+    select.filter{max-width:none; flex:1 1 calc(50% - 6px); min-width:0;}
+    /* tablas anchas: se desplazan a los lados sin romper la página */
+    #content{overflow-x:hidden;}
+    table.grid{display:block; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+    /* Listado: cada fila se vuelve una tarjeta */
+    table.listado, table.listado tbody{display:block; background:transparent; border:none;}
+    table.listado thead{display:none;}
+    table.listado tr{display:grid; grid-template-columns:auto 1fr auto; column-gap:10px; row-gap:2px; background:var(--card); border:1.5px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:9px; align-items:center;}
+    table.listado tr.listado-entregado{border-left:5px solid var(--cyan);}
+    table.listado td{display:block; padding:0; border:none; font-size:12.5px;}
+    table.listado td:nth-child(1){grid-column:1; grid-row:1; font-size:12px;}
+    table.listado td:nth-child(3){grid-column:2; grid-row:1; font-weight:800; font-size:13.5px; color:var(--brand);}
+    table.listado td:nth-child(6){grid-column:3; grid-row:1; justify-self:end;}
+    table.listado td:nth-child(4){grid-column:1 / 4; grid-row:2; color:var(--ink-2);}
+    table.listado td:nth-child(2){grid-column:1 / 3; grid-row:3; font-size:11px; color:var(--ink-3);}
+    table.listado td:nth-child(5){grid-column:3; grid-row:3; justify-self:end;}
+    /* ventanas a pantalla completa */
+    #overlay, #overlay-op{padding:0; align-items:flex-start;}
+    #overlay .modal, #overlay-op .modal{max-width:none; width:100%; margin:0; border-radius:0; min-height:100%; padding:16px 14px 0; border-top-width:5px;}
+    .overlay{padding:12px; z-index:850;}
+    #overlay-custom-alert, #overlay-custom-confirm, #overlay-fecha-entrega, #overlay-seguimiento{z-index:880;}
+    .grid2{grid-template-columns:1fr;}
+    #overlay .modal-actions, #overlay-op .modal-actions{position:sticky; bottom:0; background:var(--card); padding:12px 0 calc(12px + env(safe-area-inset-bottom)); margin-top:14px; border-top:1px solid var(--border); z-index:5; flex-wrap:wrap;}
+    #overlay .modal-actions-right, #overlay-op .modal-actions-right{flex:1; justify-content:flex-end;}
+    .pron-modal{padding:16px 12px;}
+    .auto-box{display:none;}
+    .archive-row{flex-wrap:wrap; gap:6px 8px; padding:10px 12px;}
+    .resumen-stats{grid-template-columns:1fr 1fr; gap:9px;}
+    .resumen-modal{padding:18px 14px;}
+  }
 </style>
 <script>
   window.__firebaseReady = new Promise(function(resolve){ window.__firebaseReadyResolve = resolve; });
@@ -615,6 +675,13 @@
   </div>
 </div>
 
+<nav class="bottom-nav" id="bottom-nav" aria-label="Secciones">
+  <button class="bn-item" data-view="cotizaciones" onclick="setView('cotizaciones')"><span class="bn-ic">&#128221;</span>Cotizar<span class="bn-n" id="bn-count-cotizaciones" style="display:none;"></span></button>
+  <button class="bn-item" data-view="tablero" onclick="setView('tablero')"><span class="bn-ic">&#128203;</span>Tablero</button>
+  <button class="bn-item" data-view="ordenes" onclick="setView('ordenes')"><span class="bn-ic">&#127981;</span>OP</button>
+  <button class="bn-item" data-view="panorama" onclick="setView('panorama')"><span class="bn-ic">&#128065;</span>Panorama</button>
+  <button class="bn-item" data-view="__mas" onclick="toggleMobileMenu()"><span class="bn-ic">&#9776;</span>Más</button>
+</nav>
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2 id="modal-title">Nuevo proyecto</h2>
@@ -783,6 +850,7 @@
     <h2 id="op-modal-titulo">Orden de Producción</h2>
     <div id="op-modal-subtitulo" style="margin:-12px 0 16px; font-size:12.5px; color:var(--ink-2); font-weight:700; text-transform:none;"></div>
     <div id="op-estado-botones" style="display:flex; gap:8px; margin-bottom:16px;"></div>
+    <div id="op-seguimiento" style="margin:-4px 0 16px;"></div>
 
     <div class="op-progress-track"><div class="op-progress-fill" id="op-progress-bar" style="width:0%"></div></div>
     <div id="op-progress-label" style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:16px; text-transform:none;">0 de 0 procesos completados (0%)</div>
@@ -875,6 +943,32 @@
     <div class="modal-actions" style="justify-content:flex-end;">
       <button class="btn-ghost" onclick="resolveCustomConfirm(false)">Cancelar</button>
       <button class="btn-primary" style="margin-left:0;" onclick="resolveCustomConfirm(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-seguimiento" onclick="if(event.target===this) cerrarSeguimiento()">
+  <div class="modal" style="max-width:420px; margin-top:12vh;">
+    <h2 id="seg-titulo" style="margin:0 0 6px;"></h2>
+    <p id="seg-sub" style="font-size:13px; color:var(--ink-2); line-height:1.5; margin:0 0 14px;"></p>
+    <div id="seg-av">
+      <label style="font-size:11px; font-weight:800; color:var(--ink-3); letter-spacing:.06em;">NOTA (OPCIONAL)</label>
+      <input type="text" id="seg-nota" placeholder="Ej: pintando, secando, esperando vinil" maxlength="80" style="width:100%; margin-top:4px;">
+    </div>
+    <div id="seg-sup" style="display:none;">
+      <label style="font-size:11px; font-weight:800; color:var(--ink-3); letter-spacing:.06em;">SUPLIDOR (OPCIONAL)</label>
+      <input type="text" id="seg-sup-nombre" placeholder="Ej: Imprenta X" maxlength="60" style="width:100%; margin:4px 0 12px;">
+      <label style="font-size:11px; font-weight:800; color:var(--ink-3); letter-spacing:.06em;">FECHA ESTIMADA DE ENTREGA</label>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+        <input type="date" id="seg-sup-fecha" style="text-transform:none; flex:1; min-width:150px;">
+        <button type="button" class="btn-ghost" onclick="segFechaEn(2)">2 días</button>
+        <button type="button" class="btn-ghost" onclick="segFechaEn(4)">4 días</button>
+        <button type="button" class="btn-ghost" onclick="segFechaEn(7)">1 sem.</button>
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end; margin-top:18px;">
+      <button class="btn-ghost" onclick="cerrarSeguimiento()">Cancelar</button>
+      <button class="btn-primary" style="margin-left:0;" onclick="confirmarSeguimiento()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1926,6 +2020,7 @@ function applyEstadoTransition(it, nuevoEstado){
     if(CERRADOS.includes(nuevoEstado) && !CERRADOS.includes(prev)) it.fechaCerrado = todayStr();
     if(!CERRADOS.includes(nuevoEstado) && CERRADOS.includes(prev)) it.fechaCerrado = null;
     if(it.pausado){ it.pausado = false; }
+    if(CERRADOS.includes(nuevoEstado) || nuevoEstado===ESTADO_RECHAZADO) it.suplidor = null;
   }
   it.estado = nuevoEstado;
   if(nuevoEstado === ESTADO_PENDIENTE_PAGO){
@@ -2019,11 +2114,23 @@ function refreshArchivarOPDisabled(){
   btn.disabled = !habilitado;
   btn.title = habilitado ? '' : 'Solo se puede archivar cuando todos los procesos estan al 100%';
 }
+function renderOpSeguimiento(it){
+  const box = document.getElementById('op-seguimiento'); if(!box) return;
+  if(!puedeSeguimiento(it)){ box.innerHTML = suplidorActivo(it) ? `<div class="tag" style="width:100%; text-align:center; padding:7px; font-size:11px;">&#128666; ${suplidorTexto(it)}</div>` : ''; return; }
+  const sup = suplidorActivo(it);
+  box.innerHTML = (sup ? `<div class="tag" style="background:${suplidorVencido(it)?'#FDE3EA; color:var(--magenta)':'var(--cyan-bg); color:var(--brand)'}; width:100%; text-align:center; padding:7px; font-size:11.5px; margin-bottom:8px; line-height:1.35;">&#128666; ${suplidorTexto(it)}</div>` : '')
+    + `<div style="display:flex; gap:8px;"><button type="button" class="btn-ghost" style="flex:1;" onclick="abrirSeguimiento('${it.id}','avance')">&#8635; Registrar avance</button>`
+    + (sup ? `<button type="button" class="btn-ghost" style="flex:1;" onclick="recibirDeSuplidor('${it.id}')">&#10003; Recibido del suplidor</button>` : `<button type="button" class="btn-ghost" style="flex:1;" onclick="abrirSeguimiento('${it.id}','suplidor')">&#128666; Con suplidor</button>`)
+    + `</div>`;
+}
+function opPulsar(b){ b.classList.add('pulsando'); setTimeout(()=>b.classList.remove('pulsando'),140); }
 function renderOpEstadoBotones(it){
+  try{ renderOpSeguimiento(it); }catch(e){}
   const estados = ['Listo para entrega','Entregado'];
   document.getElementById('op-estado-botones').innerHTML = estados.map(e=>{
     const activo = it.estado === e;
-    return `<button type="button" class="btn-ghost" style="flex:1; ${activo?'background:var(--brand); color:#fff; border-color:var(--brand);':''}" onclick="opAvanzarEstado('${e}')">${e}</button>`;
+    const cls = e==='Entregado' ? 'btn-op-entregado' : 'btn-op-listo';
+    return `<button type="button" class="btn-op-estado ${cls}${activo?' activo':''}" onclick="opPulsar(this); opAvanzarEstado('${e}')">${activo?'&#10003; ':''}${e}</button>`;
   }).join('');
 }
 let opPendienteCierre = null;
@@ -2056,6 +2163,12 @@ async function opAvanzarEstado(estadoTarget){
   const it = items.find(i=>i.id===opItemId);
   if(!it) return;
   if(CERRADOS.includes(estadoTarget) && !CERRADOS.includes(it.estado)){ opIrAFechaEntrega(estadoTarget); return; }
+  if(CERRADOS.includes(estadoTarget) && CERRADOS.includes(it.estado)){   // ya está entregado: lleva a la fecha para corregirla si hace falta
+    const f = document.getElementById('op-fecha-entrega');
+    f.scrollIntoView({block:'center', behavior:'smooth'}); f.focus(); try{ f.showPicker(); }catch(e){}
+    showToast('Este proyecto ya está entregado' + (it.fechaCerrado ? ' el ' + fmtDate(it.fechaCerrado) : '') + '. Aquí puedes corregir la fecha.');
+    return;
+  }
   if(!(await cambiarEstadoConFecha(it, estadoTarget))) return;
   saveItems();
   renderOpEstadoBotones(it);
@@ -2315,6 +2428,7 @@ function saveOrdenProduccion(){
     showToast('Falta la FECHA DE ENTREGA para marcar el proyecto como ' + opPendienteCierre);
     return;
   }
+  const completadosAntes = opProgress(it.ordenProduccion).completados;
   const numeroPrevio = it.ordenProduccion ? it.ordenProduccion.numero : null;
   const archivadaPrevia = it.ordenProduccion ? it.ordenProduccion.archivada : false;
   const fechaArchivadaPrevia = it.ordenProduccion ? it.ordenProduccion.fechaArchivada : null;
@@ -2342,6 +2456,10 @@ function saveOrdenProduccion(){
     notas: document.getElementById('op-notas').value.trim()
   };
   const _op = it.ordenProduccion;
+  const completadosDespues = opProgress(_op).completados;
+  if(completadosDespues !== completadosAntes && !CERRADOS.includes(it.estado)){
+    registrarMovimiento(it, 'Avance en OP: ' + completadosDespues + ' de ' + opProgress(_op).total + ' procesos');
+  }
   if(opAl100(_op)){
     _op.fechaCompletada = fechaCompletadaPrevia || todayStr();
   }
@@ -2653,7 +2771,7 @@ function renderPanorama(activos){
 
   return [
     panoramaGroup('panorama-atascados', 'Atascados', sortByDias(atascados), it=>daysSince(it.fechaUltimoCambio)+'d sin mover'),
-    panoramaGroup('panorama-atrasados', 'Atrasados', sortByDias(atrasados), it=>daysSince(it.fechaRecibido)+'d totales'),
+    panoramaGroup('panorama-atrasados', 'Atrasados', sortByDias(atrasados), it=>suplidorActivo(it) ? suplidorTexto(it) : daysSince(it.fechaRecibido)+'d totales'),
     panoramaGroup('panorama-corp-sin-op', 'Corporativos sin OP', sortByDias(corpSinOP), it=>it.estado),
     panoramaGroup('panorama-facturar', 'Falta Facturar', sortByDias(faltaFacturar), it=>it.monto?formatMoney(it.monto):'-'),
     panoramaGroup('panorama-pausados', 'Pausados', sortByDias(todosPausados), it=>`[${pausaLabel(it)}] Desde ${fmtDate(it.fechaPausado)}`),
@@ -2698,6 +2816,7 @@ function proyectosRezagados(){
     if(it.archivado || it.pausado) return false;
     if(CERRADOS.includes(it.estado) || it.estado===ESTADO_RECHAZADO) return false;
     const vencido = it.fechaLimite && todayStr() > it.fechaLimite;
+    if(suplidorActivo(it)) return !!vencido || suplidorVencido(it);
     const sinMoverse = daysSince(it.fechaUltimoCambio) >= UMBRAL_DIAS;
     return vencido || sinMoverse;
   }).sort((a,b)=>daysSince(b.fechaUltimoCambio)-daysSince(a.fechaUltimoCambio));
@@ -2815,7 +2934,7 @@ document.addEventListener('keydown', e=>{
 document.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
   const abierto = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
-  if(abierto('overlay-custom-alert') || abierto('overlay-custom-confirm') || abierto('overlay-fecha-entrega')) return; // ya los maneja su propio atajo
+  if(abierto('overlay-custom-alert') || abierto('overlay-custom-confirm') || abierto('overlay-fecha-entrega') || abierto('overlay-seguimiento')) return; // ya los maneja su propio atajo
   const orden = [
     ['overlay-op-gestionar-lista', cerrarGestionLista],
     ['overlay-rezagados', closeRezagadosDialog],
@@ -3254,15 +3373,91 @@ async function quickEstadoOrPausa(id, val){
   saveItems(); render();
 }
 
+// ===== Seguimiento: avance y suplidor =====
+function registrarMovimiento(it, texto){
+  it.fechaUltimoCambio = todayStr();
+  if(!it.historial) it.historial = [];
+  it.historial.push({estado: texto, ts: new Date().toISOString()});
+}
+function suplidorActivo(it){ return !!(it && it.suplidor && it.suplidor.fecha); }
+function suplidorVencido(it){ return suplidorActivo(it) && todayStr() > it.suplidor.fecha; }
+function puedeSeguimiento(it){
+  if(it.pausado || it.archivado || it.papelera) return false;
+  if(ESTADOS_COTIZACION.includes(it.estado) || it.estado===ESTADO_RECHAZADO || CERRADOS.includes(it.estado)) return false;
+  const k = phaseKeyOf(it.estado);
+  return k==='encurso' || k==='pendiente';
+}
+function suplidorTexto(it){
+  const n = it.suplidor.nombre ? ' ('+it.suplidor.nombre+')' : '';
+  return suplidorVencido(it)
+    ? 'Suplidor atrasado'+n+': debía entregar el '+fmtDate(it.suplidor.fecha)
+    : 'Con suplidor'+n+' - entrega estimada '+fmtDate(it.suplidor.fecha);
+}
+let _segCtx = null;
+function abrirSeguimiento(id, modo, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id); if(!it) return;
+  _segCtx = {id, modo};
+  const av = modo==='avance';
+  document.getElementById('seg-titulo').innerHTML = av ? '&#8635; Registrar avance' : '&#128666; Con suplidor';
+  document.getElementById('seg-sub').textContent = av
+    ? 'Esto le dice al sistema que el proyecto sí se está moviendo, y reinicia los días sin avance.'
+    : 'El sistema no te avisará de atascos mientras el suplidor tenga el trabajo. Si pasa la fecha estimada sin que llegue, sí te avisa.';
+  document.getElementById('seg-av').style.display = av ? '' : 'none';
+  document.getElementById('seg-sup').style.display = av ? 'none' : '';
+  document.getElementById('seg-nota').value = '';
+  const sup = it.suplidor || {};
+  document.getElementById('seg-sup-nombre').value = sup.nombre || '';
+  document.getElementById('seg-sup-fecha').value = sup.fecha || '';
+  document.getElementById('overlay-seguimiento').classList.add('open');
+  setTimeout(()=>{ try{ document.getElementById(av?'seg-nota':'seg-sup-nombre').focus(); }catch(e){} }, 50);
+}
+function cerrarSeguimiento(){ document.getElementById('overlay-seguimiento').classList.remove('open'); _segCtx = null; }
+function segFechaEn(dias){ const d = new Date(); d.setDate(d.getDate()+dias); document.getElementById('seg-sup-fecha').value = toDs(d); }
+function confirmarSeguimiento(){
+  if(!_segCtx) return;
+  const it = items.find(i=>i.id===_segCtx.id); if(!it){ cerrarSeguimiento(); return; }
+  if(_segCtx.modo==='avance'){
+    const nota = document.getElementById('seg-nota').value.trim();
+    registrarMovimiento(it, 'Avance' + (nota ? ': '+nota : ''));
+    showToast('Avance registrado' + (nota ? ': '+nota : ''));
+  } else {
+    const fecha = document.getElementById('seg-sup-fecha').value;
+    if(!fecha){ document.getElementById('seg-sup-fecha').focus(); showToast('Elige la fecha estimada de entrega'); return; }
+    const nombre = document.getElementById('seg-sup-nombre').value.trim();
+    it.suplidor = {nombre, fecha, desde: (it.suplidor && it.suplidor.desde) || todayStr()};
+    registrarMovimiento(it, 'Con suplidor' + (nombre ? ' ('+nombre+')' : '') + ', entrega estimada ' + fecha);
+    showToast('Con suplidor hasta el ' + fmtDate(fecha));
+  }
+  const id = it.id;
+  cerrarSeguimiento(); saveItems(); render();
+  if(typeof opItemId!=='undefined' && opItemId===id) renderOpEstadoBotones(it);
+}
+function recibirDeSuplidor(id, ev){
+  if(ev) ev.stopPropagation();
+  const it = items.find(i=>i.id===id); if(!it) return;
+  it.suplidor = null;
+  registrarMovimiento(it, 'Recibido del suplidor');
+  saveItems(); render();
+  if(typeof opItemId!=='undefined' && opItemId===id) renderOpEstadoBotones(it);
+  showToast('Recibido del suplidor');
+}
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('overlay-seguimiento').classList.contains('open')) return;
+  if(e.key==='Escape') cerrarSeguimiento();
+  if(e.key==='Enter' && e.target.tagName!=='TEXTAREA'){ e.preventDefault(); confirmarSeguimiento(); }
+});
 function getAlert(it){
   if(CERRADOS.includes(it.estado) || it.estado===ESTADO_RECHAZADO || it.pausado) return null;
   if(it.fechaLimite && todayStr() > it.fechaLimite) return 'vencido';
+  if(suplidorActivo(it)) return suplidorVencido(it) ? 'vencido' : null;
   if(daysSince(it.fechaUltimoCambio) >= 3) return 'atencion';
   return null;
 }
 function isCriticalAlert(it){
   if(CERRADOS.includes(it.estado) || it.estado===ESTADO_RECHAZADO || it.archivado || it.pausado) return false;
   const vencido = it.fechaLimite && todayStr() > it.fechaLimite;
+  if(suplidorActivo(it)) return !!vencido || suplidorVencido(it);   // con suplidor al día: no cuenta como atrasado
   const atrasadoGeneral = daysSince(it.fechaRecibido) > 5;
   return vencido || atrasadoGeneral;
 }
@@ -3305,10 +3500,20 @@ function reanudarProyecto(id, ev){
 function setView(v){
   view = v;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===v));
+  syncBottomNav(v);
   const titles = {tablero:'Tablero de Produccion', tabla:'Tabla', calendario:'Calendario', archivo:'Archivo', ordenes:'Ordenes de Produccion', panorama:'Panorama del dia', listado:'Listado completo', cotizaciones:'Cotizaciones'};
   document.getElementById('page-title').textContent = titles[v];
   closeMobileMenu();
   render();
+}
+function syncBottomNav(v){
+  const principales = ['cotizaciones','tablero','ordenes','panorama'];
+  document.querySelectorAll('.bn-item').forEach(b=>{
+    const d = b.dataset.view;
+    b.classList.toggle('active', d===v || (d==='__mas' && !principales.includes(v)));
+  });
+  const n = document.getElementById('count-cotizaciones'), bn = document.getElementById('bn-count-cotizaciones');
+  if(n && bn){ const c = n.textContent.trim(); bn.textContent = c; bn.style.display = (c && c!=='0') ? 'flex' : 'none'; }
 }
 function setTableSubView(v){ tableSubView = v; render(); }
 function toggleGroup(key){ collapsedGroups[key] = !collapsedGroups[key]; render(); }
@@ -3333,6 +3538,7 @@ function cardHtml(it, orderNum){
   let metaWarn = '';
   if(alertLevel==='vencido') metaWarn = '<span class="warn"> - Vencido</span>';
   else if(alertLevel==='atencion') metaWarn = '<span class="watch"> - '+daysSince(it.fechaUltimoCambio)+'d sin avance</span>';
+  if(alertLevel==='vencido' && suplidorVencido(it)) metaWarn = '<span class="warn"> - Suplidor atrasado</span>';
   const next = nextEstadoFor(it);
   return `
     <div class="card ${alertLevel||''}" draggable="true" data-id="${it.id}" ondragstart="onDragStart(event,'${it.id}')" ondragend="onDragEnd(event)" onclick="openModal('${it.id}')">
@@ -3353,10 +3559,12 @@ function cardHtml(it, orderNum){
       </div>
       <div class="card-meta">${dias}d en fila${it.fechaLimite ? ' - limite '+it.fechaLimite : ''}${metaWarn}</div>
       ${it.pausado ? `<div class="tag" style="background:var(--neutral-bg); color:var(--ink-2); width:100%; text-align:center; padding:6px 0; margin-top:6px; font-size:11px;">${pausaIcon(it)} ${pausaLabel(it)} desde ${fmtDate(it.fechaPausado)}</div>` : ''}
+      ${suplidorActivo(it) ? `<div class="tag" style="background:${suplidorVencido(it)?'#FDE3EA; color:var(--magenta)':'var(--cyan-bg); color:var(--brand)'}; width:100%; text-align:center; padding:6px 4px; margin-top:6px; font-size:11px; line-height:1.35;">&#128666; ${suplidorTexto(it)}</div>` : ''}
       ${isCriticalAlert(it) ? '<div class="blink-badge">&#9888; ATRASADO</div>' : ''}
       ${it.pausado
         ? `<button class="advance-btn" onclick="reanudarProyecto('${it.id}', event)">&#9654; Reanudar</button>`
         : (it.estado===ESTADO_PENDIENTE_PAGO ? `<button class="advance-btn" onclick="marcarPagadoDesdeCard('${it.id}', event)">&#10003; Marcar pagado</button><button class="advance-btn" style="margin-top:6px;" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>` : next ? `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${estadoTxt(next, it)} &#9656;</button>` : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
+      ${puedeSeguimiento(it) ? `<div style="display:flex; gap:6px; margin-top:6px;"><button class="reject-btn" style="flex:1; margin-top:0; border-color:var(--brand); color:var(--brand);" onclick="abrirSeguimiento('${it.id}','avance',event)">&#8635; Registrar avance</button>${suplidorActivo(it) ? `<button class="reject-btn" style="flex:1; margin-top:0; border-color:var(--cyan); color:var(--brand);" onclick="recibirDeSuplidor('${it.id}',event)">&#10003; Recibido</button>` : `<button class="reject-btn" style="flex:1; margin-top:0; border-color:var(--brand); color:var(--brand);" onclick="abrirSeguimiento('${it.id}','suplidor',event)">&#128666; Con suplidor</button>`}</div>` : ''}
       ${(!it.pausado && puedePausar(it)) ? `<button class="reject-btn" style="border-color:var(--ink-3); color:var(--ink-2);" onclick="pausarProyecto('${it.id}', event)">${pausaIcon(it)} ${pausaAccionLabel(it)}</button>` : ''}
       ${it.estado==='Enviada' ? `<button class="reject-btn" onclick="rechazarProyecto('${it.id}', event)">&#10005; No aprobada</button>` : ''}
     </div>
@@ -4400,6 +4608,7 @@ function renderResumenMensual(){
 }
 
 function render(){
+  try{ syncBottomNav(view); }catch(e){}
   const btnNuevo = document.getElementById('btn-nuevo-proyecto');
   btnNuevo.style.display = view==='ordenes' ? 'none' : '';
   btnNuevo.textContent = view==='cotizaciones' ? '+ Nueva cotizacion' : '+ Nuevo proyecto';

@@ -237,7 +237,8 @@
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .oc-line{display:flex; align-items:center; gap:8px; margin-bottom:12px;}
   .oc-line input[type=checkbox]{width:auto;}
-  .btn-op-estado{flex:1; padding:13px 10px; border-radius:12px; font-family:inherit; font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; border:1px solid; position:relative; top:0; transition:transform .08s ease, box-shadow .08s ease, filter .15s ease; -webkit-tap-highlight-color:transparent;}
+  #btn-cerrar-proyecto:disabled{opacity:.4; cursor:not-allowed; filter:grayscale(.6);}
+.btn-op-estado{flex:1; padding:13px 10px; border-radius:12px; font-family:inherit; font-size:13px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; border:1px solid; position:relative; top:0; transition:transform .08s ease, box-shadow .08s ease, filter .15s ease; -webkit-tap-highlight-color:transparent;}
   .btn-op-estado:hover{filter:brightness(1.07);}
   .btn-op-listo{background:linear-gradient(180deg,#FFE766 0%,#FDC901 55%,#EDB800 100%); color:#000080; border-color:#B58E00; box-shadow:0 5px 0 #9A7700, 0 9px 14px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.65), inset 0 -2px 0 rgba(0,0,0,.08);}
   .btn-op-entregado{background:linear-gradient(180deg,#3535C0 0%,#000080 60%,#00006A 100%); color:#fff; border-color:#00003A; box-shadow:0 5px 0 #00002B, 0 9px 14px rgba(0,0,0,.32), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(0,0,0,.2);}
@@ -746,6 +747,10 @@
       <div class="field" id="field-fecha-envio" style="display:none;"><label>Fecha de envio</label><input type="date" id="f-fecha-envio" style="text-transform:none;"></div>
       <div class="field" id="field-limite-line"><label>Fecha limite</label><input type="date" id="f-limite" style="text-transform:none;"></div>
     </div>
+    <div id="aviso-op-controla" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; background:var(--cyan-bg); color:var(--brand); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:11.5px; font-weight:700; line-height:1.4; text-transform:none;">
+      <span style="flex:1; min-width:180px;">Este proyecto se controla desde su ORDEN DE PRODUCCIÓN: estado, fecha de entrega, cierre y pausa.</span>
+      <button type="button" class="btn-primary" style="margin:0;" onclick="openOrdenProduccion()">ABRIR OP</button>
+    </div>
     <div class="grid2" id="field-fecha-entrega-row">
       <div class="field"><label>Fecha de Entrega</label><input type="date" id="f-fecha-entrega" style="text-transform:none;" onchange="avisoFechaEntregaModal(this.value)"></div>
       <div class="field" id="field-btn-cerrar" style="display:flex; align-items:flex-end;"><button type="button" class="btn-primary" id="btn-cerrar-proyecto" style="width:100%;" onclick="cerrarProyectoDesdeModal()">CERRAR</button></div>
@@ -862,6 +867,7 @@
     <div id="op-modal-subtitulo" style="margin:-12px 0 16px; font-size:12.5px; color:var(--ink-2); font-weight:700; text-transform:none;"></div>
     <div id="op-estado-botones" style="display:flex; gap:8px; margin-bottom:16px;"></div>
     <div id="op-seguimiento" style="margin:-4px 0 16px;"></div>
+    <div id="op-pausa" style="margin:-4px 0 16px;"></div>
 
     <div class="op-progress-track"><div class="op-progress-fill" id="op-progress-bar" style="width:0%"></div></div>
     <div id="op-progress-label" style="font-size:11px; color:var(--ink-2); font-weight:700; margin-bottom:16px; text-transform:none;">0 de 0 procesos completados (0%)</div>
@@ -2137,12 +2143,24 @@ function renderOpSeguimiento(it){
 function opPulsar(b){ b.classList.add('pulsando'); setTimeout(()=>b.classList.remove('pulsando'),140); }
 function renderOpEstadoBotones(it){
   try{ renderOpSeguimiento(it); }catch(e){}
-  const estados = ['Listo para entrega','Entregado'];
+  try{ renderOpPausa(it); }catch(e){}
+  const estados = ['Listo para entrega','Entregado'].concat(it.tipoCliente==='counter' ? [ESTADO_PENDIENTE_PAGO] : []);
   document.getElementById('op-estado-botones').innerHTML = estados.map(e=>{
     const activo = it.estado === e;
-    const cls = e==='Entregado' ? 'btn-op-entregado' : 'btn-op-listo';
+    const cls = (e==='Entregado' || e===ESTADO_PENDIENTE_PAGO) ? 'btn-op-entregado' : 'btn-op-listo';
     return `<button type="button" class="btn-op-estado ${cls}${activo?' activo':''}" onclick="opPulsar(this); opAvanzarEstado('${e}')">${activo?'&#10003; ':''}${e}</button>`;
   }).join('');
+}
+function renderOpPausa(it){
+  const pz = document.getElementById('op-pausa'); if(!pz) return;
+  if(it.pausado){ pz.innerHTML = `<button type="button" class="btn-ghost" style="width:100%;" onclick="opTogglePausa()">&#9654; Reanudar</button>`; }
+  else if(puedePausar(it)){ pz.innerHTML = `<button type="button" class="btn-ghost" style="width:100%;" onclick="opTogglePausa()">${pausaIcon(it)} ${pausaAccionLabel(it)}</button>`; }
+  else { pz.innerHTML = ''; }
+}
+function opTogglePausa(){
+  const it = items.find(i=>i.id===opItemId); if(!it) return;
+  if(it.pausado) reanudarProyecto(it.id); else pausarProyecto(it.id);
+  renderOpEstadoBotones(it);
 }
 let opPendienteCierre = null;
 function opIrAFechaEntrega(estadoTarget){
@@ -2484,6 +2502,10 @@ function opProgress(op){
   const completados = procesos.filter(p=>p.completado).length;
   const pct = total ? Math.round((completados/total)*100) : 0;
   return {completados, total, pct};
+}
+// Desde que existe la OP (con contenido), la OP manda sobre el estado, la fecha de entrega, el cierre y la pausa.
+function controlaOP(it){
+  return !!(it && it.ordenProduccion && opTieneContenido(it.ordenProduccion) && !ESTADOS_COTIZACION.includes(it.estado) && it.estado!==ESTADO_RECHAZADO);
 }
 function opTieneContenido(op){
   return !!(op && ((Array.isArray(op.procesos)&&op.procesos.length) || (Array.isArray(op.materiales)&&op.materiales.length) || op.tamano || op.notas || op.cantidad));
@@ -3093,6 +3115,11 @@ function restaurarLayoutFechasNormal(){
     home.after(fechaRecepcionDiv);
   }
 }
+function aplicarBloqueoOP(it){
+  const lock = !!(it && controlaOP(it));
+  ['f-estado','f-fecha-entrega','btn-cerrar-proyecto','f-pendiente-pago'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled = lock; });
+  const av = document.getElementById('aviso-op-controla'); if(av) av.style.display = lock ? 'flex' : 'none';
+}
 function openModal(prefillId){
   editingId = prefillId || null;
   refreshClientesList();
@@ -3145,6 +3172,7 @@ function openModal(prefillId){
       return `<option value="${e}" ${sel?'selected':''}>${estadoTxt(e, it)}</option>` + extra;
     }).join('');
     toggleFechaPagoVisible();
+    aplicarBloqueoOP(it);
     fieldEstado.style.display = 'block';
     btnDelete.style.display = 'block';
     document.getElementById('btn-duplicar').style.display = 'block';
@@ -3185,6 +3213,7 @@ function openModal(prefillId){
     document.getElementById('f-numero-oc').disabled = true;
     catSel.value = 'Offset';
     buildCategoriaSelect('');
+    aplicarBloqueoOP(null);
     fieldEstado.style.display = 'none';
     btnDelete.style.display = 'none';
     document.getElementById('btn-duplicar').style.display = 'none';
@@ -3745,6 +3774,8 @@ function prioHtml(it){
 }
 
 function cardHtml(it, orderNum){
+  const opManda = controlaOP(it);
+  const abrirOpBtn = `<button class="advance-btn" onclick="event.stopPropagation(); openOrdenProduccion('${it.id}')">&#127981; Abrir OP &#9656;</button>`;
   const alertLevel = getAlert(it);
   const dias = daysSince(it.fechaRecibido);
   let metaWarn = '';
@@ -3753,7 +3784,7 @@ function cardHtml(it, orderNum){
   if(alertLevel==='vencido' && suplidorVencido(it)) metaWarn = '<span class="warn"> - Suplidor atrasado</span>';
   const next = nextEstadoFor(it);
   return `
-    <div class="card ${alertLevel||''}" draggable="true" data-id="${it.id}" ondragstart="onDragStart(event,'${it.id}')" ondragend="onDragEnd(event)" onclick="openModal('${it.id}')">
+    <div class="card ${alertLevel||''}" draggable="${opManda?'false':'true'}" data-id="${it.id}" ondragstart="onDragStart(event,'${it.id}')" ondragend="onDragEnd(event)" onclick="openModal('${it.id}')">
       <div class="card-top">
         <span class="order-tag">#${orderNum}</span>
         ${prioHtml(it)}
@@ -3774,10 +3805,10 @@ function cardHtml(it, orderNum){
       ${suplidorActivo(it) ? `<div class="tag" style="background:${suplidorVencido(it)?'#FDE3EA; color:var(--magenta)':'var(--cyan-bg); color:var(--brand)'}; width:100%; text-align:center; padding:6px 4px; margin-top:6px; font-size:11px; line-height:1.35;">&#128666; ${suplidorTexto(it)}</div>` : ''}
       ${isCriticalAlert(it) ? '<div class="blink-badge">&#9888; ATRASADO</div>' : ''}
       ${it.pausado
-        ? `<button class="advance-btn" onclick="reanudarProyecto('${it.id}', event)">&#9654; Reanudar</button>`
-        : (it.estado===ESTADO_PENDIENTE_PAGO ? `<button class="advance-btn" onclick="marcarPagadoDesdeCard('${it.id}', event)">&#10003; Marcar pagado</button><button class="advance-btn" style="margin-top:6px;" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>` : next ? `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${estadoTxt(next, it)} &#9656;</button>` : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
+        ? (opManda ? abrirOpBtn : `<button class="advance-btn" onclick="reanudarProyecto('${it.id}', event)">&#9654; Reanudar</button>`)
+        : (it.estado===ESTADO_PENDIENTE_PAGO ? `<button class="advance-btn" onclick="marcarPagadoDesdeCard('${it.id}', event)">&#10003; Marcar pagado</button><button class="advance-btn" style="margin-top:6px;" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>` : next ? (opManda ? abrirOpBtn : `<button class="advance-btn" onclick="advanceCard('${it.id}', event)">Avanzar a ${estadoTxt(next, it)} &#9656;</button>`) : `<button class="advance-btn" onclick="archivarProyecto('${it.id}', event)">&#128230; Archivar proyecto</button>`)}
       ${puedeSeguimiento(it) ? `<div style="display:flex; gap:6px; margin-top:6px;"><button class="reject-btn" style="flex:1; margin-top:0; border-color:var(--brand); color:var(--brand);" onclick="abrirSeguimiento('${it.id}','avance',event)">&#8635; Registrar avance</button>${suplidorActivo(it) ? `<button class="reject-btn" style="flex:1; margin-top:0; border-color:var(--cyan); color:var(--brand);" onclick="recibirDeSuplidor('${it.id}',event)">&#10003; Recibido</button>` : `<button class="reject-btn" style="flex:1; margin-top:0; border-color:var(--brand); color:var(--brand);" onclick="abrirSeguimiento('${it.id}','suplidor',event)">&#128666; Con suplidor</button>`}</div>` : ''}
-      ${(!it.pausado && puedePausar(it)) ? `<button class="reject-btn" style="border-color:var(--ink-3); color:var(--ink-2);" onclick="pausarProyecto('${it.id}', event)">${pausaIcon(it)} ${pausaAccionLabel(it)}</button>` : ''}
+      ${(!opManda && !it.pausado && puedePausar(it)) ? `<button class="reject-btn" style="border-color:var(--ink-3); color:var(--ink-2);" onclick="pausarProyecto('${it.id}', event)">${pausaIcon(it)} ${pausaAccionLabel(it)}</button>` : ''}
       ${it.estado==='Enviada' ? `<button class="reject-btn" onclick="rechazarProyecto('${it.id}', event)">&#10005; No aprobada</button>` : ''}
     </div>
   `;
@@ -3793,6 +3824,7 @@ async function onColDrop(ev, estado){
   if(!dragId) return;
   const it = items.find(i=>i.id===dragId);
   dragId = null;
+  if(it && controlaOP(it)){ showToast('Este proyecto se controla desde su OP. Ábrela para cambiar el estado.'); render(); return; }
   if(it && it.estado !== estado){ if(await cambiarEstadoConFecha(it, estado)) saveItems(); }
   render();
 }
@@ -3904,9 +3936,9 @@ function rowHtml(it, orderNum){
       <td><div class="client-cell"><div class="client-ico"></div><span>${it.cliente}</span><span class="order-mini">#${orderNum}</span></div></td>
       <td>${fmtDate(it.fechaRecibido)}</td>
       <td onclick="event.stopPropagation()">
-        <select class="pill ${pillClassFor(it.estado)}" style="border:none;" onchange="quickEstadoOrPausa('${it.id}', this.value)">
+        <select class="pill ${pillClassFor(it.estado)}" style="border:none;" onchange="quickEstadoOrPausa('${it.id}', this.value)" ${controlaOP(it)?'disabled title="Se controla desde la OP"':''}>
           ${estadoOptions(it.origen).map(e=>`<option value="${e}" ${(!it.pausado && e===it.estado)?'selected':''}>${e}</option>`).join('')}
-          ${(it.pausado || puedePausar(it)) ? `<option value="__PAUSADO__" ${it.pausado?'selected':''}>${pausaIcon(it)} Pausado</option>` : ''}
+          ${(!controlaOP(it) && (it.pausado || puedePausar(it))) ? `<option value="__PAUSADO__" ${it.pausado?'selected':''}>${pausaIcon(it)} Pausado</option>` : ''}
         </select>
         ${alertLevel==='vencido' ? ' <span style="color:var(--magenta); font-size:10.5px; font-weight:700;">Vencido</span>' : alertLevel==='atencion' ? ' <span style="color:#8A6A00; font-size:10.5px; font-weight:700;">Estancado</span>' : ''}
         ${isCriticalAlert(it) ? ' <span style="color:var(--magenta); font-size:10.5px; font-weight:800;">&#9888; Atrasado</span>' : ''}
